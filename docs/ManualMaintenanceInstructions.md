@@ -5,7 +5,6 @@
 **N**: Number of days without commits before a branch is stale.  
 **M**: Number of days without commits before an archive tag is stale.  
 **K**: Number of days without commits before a branch or archive tag is stale a developer is notified of pending archival or deletion. 0 <= K < N & M  
-**X**: Number of previous commits to read for authors to send notifications to.  
 **Excluded Branches**: The list of branch names to exclude in archival.  
 **Execution Date**: The date at which the program is being run.
 **File Path**: The file path to the local repo on the machine.
@@ -16,7 +15,6 @@ Unless otherwise stated, parameters are
 - N = 60
 - M = 30
 - K = 7
-- X = 3
 - Excluded Branches = "main"
 - Execution Date = 2023-06-01
 - File Path = C:\Users\ellis\Documents\repos\test-case-(test case num)

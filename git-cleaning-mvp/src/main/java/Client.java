@@ -2,26 +2,42 @@ import java.util.List;
 
 public class Client {
 
-    // All to be refactored into configuration later
-    private static final String repoPath = "C:\\Users\\ellis\\Documents\\repos\\test-case-5\\.git";
-    private static final int n = 60;
-    private static final int m = 30;
-    private static final int k = 7;
+    private static Config config;
+
+    // Hardcoded for testing. Will pull from current time in final implementation
     private static final int executionTime = 1685682000;
 
     public static void main(String[] args) {
-        GitCleaner cleaner = new GitCleaner(repoPath);
+        config = new Config("default_config.properties");
+
+        GitCleaner cleaner = new GitCleaner(config.REPO_DIR);
 
         List<Branch> branches = cleaner.getBranches();
         List<Tag> tags = cleaner.getTags();
 
         for (Branch b : branches) {
-            int commitTime = b.commits().get(0).commitTime();
+            if (!config.EXCLUDED_BRANCHES.contains(b.name())) {
+                int commitTime = b.commits().get(0).commitTime();
 
-            if (executionTime - commitTime == n - k) {
+                if (executionTime - commitTime == config.N - config.K) {
+                    // Will send email
+                } else if (executionTime - commitTime >= config.N) {
+                    // Will send email
+                    cleaner.archiveBranch(b);
+                }
+            }
+        }
 
-            } else if (executionTime - commitTime >= n) {
+        for (Tag t : tags) {
+            if (t.name().matches("zArchiveBranch_\\d{8}_\\w*")) {
+                int commitTime = t.commit().commitTime();
 
+                if (executionTime - commitTime == config.N + config.M - config.K) {
+                    // Will send email
+                } else if (executionTime - commitTime >= config.N + config.M) {
+                    // Will send email
+                    cleaner.deleteTag(t);
+                }
             }
         }
     }

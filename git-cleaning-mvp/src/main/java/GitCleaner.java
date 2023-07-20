@@ -1,6 +1,8 @@
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
+import org.eclipse.jgit.api.errors.ConcurrentRefUpdateException;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.api.errors.InvalidTagNameException;
 import org.eclipse.jgit.api.errors.NoHeadException;
 import org.eclipse.jgit.errors.AmbiguousObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
@@ -13,10 +15,15 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
 // This class will assume the repo exists locally. Another class will take care setting it up if needed
+// This class is starting to feel quite bloated. Not sure if I'm missed calibrated or if it is
 public class GitCleaner implements IGitCleaner {
 
     private final Repository repo;
@@ -90,6 +97,37 @@ public class GitCleaner implements IGitCleaner {
         return tags;
     }
 
+    // Should this have a confirmation return?
+    @Override
+    public void archiveBranch(Branch branch) {
+        try {
+            git.tag().setName(createArchiveTagName(branch.name())).call();
+
+            // Should this cause an error from being checked out on the branch attempting to be deleted,
+            // log an error but don't halt program execution
+            git.branchDelete().setBranchNames(branch.name()).setForce(true).call();
+
+        } catch (NoHeadException e) {
+            throw new RuntimeException(e);
+        } catch (InvalidTagNameException e) {
+            throw new RuntimeException(e);
+        } catch (ConcurrentRefUpdateException e) {
+            throw new RuntimeException(e);
+        } catch (GitAPIException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    // Should this return something to confirm tag deletion?
+    @Override
+    public void deleteTag(Tag tag) {
+        try {
+            git.tagDelete().setTags(tag.name()).call();
+        } catch (GitAPIException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
     private List<Commit> getBranchCommitList(String branch) {
         List<Commit> commits = new ArrayList<>();
@@ -150,5 +188,21 @@ public class GitCleaner implements IGitCleaner {
         CommitAuthor author = new CommitAuthor(rawAuthor.getName(), rawAuthor.getEmailAddress());
 
         return new Commit(commitId, commitTime, author);
+    }
+
+    private String createArchiveTagName(String branchName) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("zArchiveBranch_");
+
+        // Hardcoded time for testing. Will use current time in actual execution
+        ZonedDateTime exeTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond(1685682000), ZoneId.systemDefault());
+        String formattedTime = exeTime.format(DateTimeFormatter.BASIC_ISO_DATE).substring(0, 8);
+        sb.append(formattedTime);
+
+        sb.append("_");
+        sb.append(branchName);
+
+        return sb.toString();
     }
 }

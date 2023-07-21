@@ -1,5 +1,6 @@
 import java.util.List;
 
+// Needs a rename
 public interface IGitCleaner {
 
     List<Branch> getBranches();

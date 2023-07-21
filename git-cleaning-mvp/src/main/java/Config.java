@@ -6,6 +6,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
+// Does this class need more than just loading in application config?
+// What happens when it has an issue with the config loading in?
+// How does a user do initial setup and edits to config?
 public class Config {
 
     public final int N;

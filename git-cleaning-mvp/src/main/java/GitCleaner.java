@@ -23,7 +23,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 // This class will assume the repo exists locally. Another class will take care setting it up if needed
-// This class is starting to feel quite bloated. Not sure if I'm missed calibrated or if it is
+
+// This class is starting to feel quite bloated. Not sure if I'm miss-calibrated or if it really is
+// Should fetching data be one class and making changes be another?
+
+// Needs a rename
 public class GitCleaner implements IGitCleaner {
 
     private final Repository repo;
@@ -195,7 +199,7 @@ public class GitCleaner implements IGitCleaner {
 
         sb.append("zArchiveBranch_");
 
-        // Hardcoded time for testing. Will use current time in actual execution
+        // Hardcoded time for testing. Will use current time in final implementation
         ZonedDateTime exeTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond(1685682000), ZoneId.systemDefault());
         String formattedTime = exeTime.format(DateTimeFormatter.BASIC_ISO_DATE).substring(0, 8);
         sb.append(formattedTime);

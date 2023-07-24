@@ -21,7 +21,6 @@ public class Config {
     // Should programmatically writing to config be available?
     public Config(String propertiesFile) {
         try {
-            // Should the name of the config file be hardcoded or passed in?
             File configFile = new File(propertiesFile);
             FileReader reader = new FileReader(configFile);
 
@@ -35,6 +34,7 @@ public class Config {
             REPO_DIR = props.getProperty("repo directory");
 
             reader.close();
+
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {

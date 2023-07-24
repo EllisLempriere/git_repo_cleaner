@@ -1,212 +1,102 @@
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.LogCommand;
-import org.eclipse.jgit.api.errors.ConcurrentRefUpdateException;
-import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.api.errors.InvalidTagNameException;
-import org.eclipse.jgit.api.errors.NoHeadException;
-import org.eclipse.jgit.errors.AmbiguousObjectException;
-import org.eclipse.jgit.errors.IncorrectObjectTypeException;
-import org.eclipse.jgit.errors.MissingObjectException;
-import org.eclipse.jgit.lib.PersonIdent;
-import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-
-import java.io.File;
-import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 
-// This class will assume the repo exists locally. Another class will take care setting it up if needed
+public class GitCleaner {
 
-// This class is starting to feel quite bloated. Not sure if I'm miss-calibrated or if it really is
-// Should fetching data be one class and making changes be another?
+    private final Config CONFIG;
+    private final ILogWrapper LOGGER;
 
-// Needs a rename
-public class GitCleaner implements IGitCleaner {
-
-    private final Repository repo;
-    private final Git git;
+    // Hardcoded for testing. Will pull from current time in final implementation
+    private static final int executionTime = 1685682000;
 
 
-    public GitCleaner(String filePath) {
-        File directory = new File(filePath);
-
-        FileRepositoryBuilder repoBuilder = new FileRepositoryBuilder();
-        try (Repository repo = repoBuilder.setGitDir(directory)
-                .readEnvironment()
-                .findGitDir()
-                .build()) {
-
-            this.repo = repo;
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        try (Git git = new Git(repo)) {
-            this.git = git;
-        }
+    public GitCleaner(Config config, ILogWrapper logger) {
+        this.CONFIG = config;
+        this.LOGGER = logger;
     }
 
 
-    @Override
-    public List<Branch> getBranches() {
-        List<Branch> branches = new ArrayList<>();
+    public void clean() {
+        LOGGER.log(Level.INFO, "Starting cleaning");
 
-        try {
-            List<Ref> rawBranches = git.branchList().call();
+        GitWrapper git = new GitWrapper(CONFIG.REPO_DIR, LOGGER);
 
-            for (Ref b : rawBranches) {
-                String[] refPath = b.getName().split("/");
-                String branchName = refPath[refPath.length - 1];
+        List<Branch> branches = git.getBranches(LOGGER);
+        List<Tag> tags = git.getTags(LOGGER);
 
-                List<Commit> commits = getBranchCommitList(branchName);
+        // Getting all branches and tags before doing any processing. This way if a branch is older than n+m days,
+        // it will get archived on the first day and will not get deleted until another run the next day
+        // Change this behavior?
 
-                branches.add(new Branch(branchName, commits));
+        if (branches != null) {
+            LOGGER.log(Level.INFO, "Checking branches");
+            for (Branch b : branches) {
+                LOGGER.log(Level.INFO, "Checking branch " + b.name());
+
+                if (CONFIG.EXCLUDED_BRANCHES.contains(b.name()))
+                    continue;
+
+                int commitTime = b.commits().get(0).commitTime();
+                int daysSinceCommit = (executionTime - commitTime) / 86400;
+
+                if (daysSinceCommit == CONFIG.N - CONFIG.K) {
+                    // Send email for pending archival
+                } else if (daysSinceCommit >= CONFIG.N) {
+                    // Send email for archival
+                    Tag newArchiveTag = buildArchiveTag(b);
+                    LOGGER.log(Level.INFO, "Archiving branch " + b.name() + " as " +  newArchiveTag.name());
+
+                    boolean tagCreated = git.setTag(newArchiveTag, LOGGER);
+
+                    if (tagCreated)
+                        git.deleteBranch(b, LOGGER);
+                }
             }
-
-        } catch (GitAPIException e) {
-            throw new RuntimeException(e);
         }
+        LOGGER.log(Level.INFO, "Finished checking branches");
 
-        return branches;
-    }
+        if (tags != null) {
+            LOGGER.log(Level.INFO, "Checking tags");
 
-    @Override
-    public List<Tag> getTags() {
-        List<Tag> tags = new ArrayList<>();
+            for (Tag t : tags) {
+                LOGGER.log(Level.INFO, "Checking tag " + t.name());
 
-        try {
-            List<Ref> rawTags = git.tagList().call();
+                if (t.name().matches("zArchiveBranch_\\d{8}_\\w*"))
+                    continue;
 
-            for (Ref t : rawTags) {
-                String[] refPath = t.getName().split("/");
-                String tagName = refPath[refPath.length - 1];
+                int commitTime = t.commit().commitTime();
+                int daysSinceCommit = (executionTime - commitTime) / 86400;
 
-                Commit commit = getTagCommit(t);
-
-                tags.add(new Tag(tagName, commit));
+                if (daysSinceCommit == CONFIG.N + CONFIG.M - CONFIG.K) {
+                    // Send email for pending archive tag deletion
+                } else if (daysSinceCommit >= CONFIG.N + CONFIG.M) {
+                    // Send email for archive tag deletion
+                    git.deleteTag(t, LOGGER);
+                }
             }
-
-        } catch (GitAPIException e) {
-            throw new RuntimeException(e);
+            LOGGER.log(Level.INFO, "Finished checking tags");
         }
 
-        return tags;
-    }
-
-    // Should this have a confirmation return?
-    @Override
-    public void archiveBranch(Branch branch) {
-        try {
-            git.tag().setName(createArchiveTagName(branch.name())).call();
-
-            // Should this cause an error from being checked out on the branch attempting to be deleted,
-            // log an error but don't halt program execution
-            git.branchDelete().setBranchNames(branch.name()).setForce(true).call();
-
-        } catch (NoHeadException e) {
-            throw new RuntimeException(e);
-        } catch (InvalidTagNameException e) {
-            throw new RuntimeException(e);
-        } catch (ConcurrentRefUpdateException e) {
-            throw new RuntimeException(e);
-        } catch (GitAPIException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    // Should this return something to confirm tag deletion?
-    @Override
-    public void deleteTag(Tag tag) {
-        try {
-            git.tagDelete().setTags(tag.name()).call();
-        } catch (GitAPIException e) {
-            throw new RuntimeException(e);
-        }
+        LOGGER.log(Level.INFO, "Successfully finished cleaning");
     }
 
 
-    private List<Commit> getBranchCommitList(String branch) {
-        List<Commit> commits = new ArrayList<>();
+    private Tag buildArchiveTag(Branch branch) {
+        StringBuilder tagName = new StringBuilder();
 
-        try {
-            Iterable<RevCommit> rawCommits = git.log().add(repo.resolve(branch)).call();
+        tagName.append("zArchiveBranch_");
 
-            for (RevCommit c : rawCommits)
-                commits.add(parseRevCommit(c));
-
-        // Leaving exceptions alone for the time being until logging gets set up
-        } catch (NoHeadException e) {
-            throw new RuntimeException(e);
-        } catch (GitAPIException e) {
-            throw new RuntimeException(e);
-        } catch (AmbiguousObjectException e) {
-            throw new RuntimeException(e);
-        } catch (IncorrectObjectTypeException e) {
-            throw new RuntimeException(e);
-        } catch (MissingObjectException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        return commits;
-    }
-
-    private Commit getTagCommit(Ref tag) {
-        try {
-            LogCommand logCmd = git.log();
-
-            Ref peeledRef = repo.getRefDatabase().peel(tag);
-            if (peeledRef.getPeeledObjectId() != null)
-                logCmd.add(peeledRef.getPeeledObjectId());
-            else
-                logCmd.add(tag.getObjectId());
-
-            Iterable<RevCommit> tagLog = logCmd.call();
-
-            return parseRevCommit(tagLog.iterator().next());
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (NoHeadException e) {
-            throw new RuntimeException(e);
-        } catch (GitAPIException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Commit parseRevCommit(RevCommit rawCommit) {
-        String commitId = rawCommit.getId().getName();
-
-        int commitTime = rawCommit.getCommitTime();
-
-        PersonIdent rawAuthor = rawCommit.getAuthorIdent();
-        CommitAuthor author = new CommitAuthor(rawAuthor.getName(), rawAuthor.getEmailAddress());
-
-        return new Commit(commitId, commitTime, author);
-    }
-
-    private String createArchiveTagName(String branchName) {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("zArchiveBranch_");
-
-        // Hardcoded time for testing. Will use current time in final implementation
-        ZonedDateTime exeTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond(1685682000), ZoneId.systemDefault());
+        ZonedDateTime exeTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond(executionTime), ZoneId.systemDefault());
         String formattedTime = exeTime.format(DateTimeFormatter.BASIC_ISO_DATE).substring(0, 8);
-        sb.append(formattedTime);
+        tagName.append(formattedTime);
 
-        sb.append("_");
-        sb.append(branchName);
+        tagName.append("_");
+        tagName.append(branch.name());
 
-        return sb.toString();
+        return new Tag(tagName.toString(), branch.commits().get(0));
     }
 }

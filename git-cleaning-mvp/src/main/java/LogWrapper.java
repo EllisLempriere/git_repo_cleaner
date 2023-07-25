@@ -3,6 +3,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.logging.*;
 
+// What happens if logger cannot be set up correctly?
 public class LogWrapper implements ILogWrapper {
 
     private Logger logger = Logger.getLogger("TempLoggerName");

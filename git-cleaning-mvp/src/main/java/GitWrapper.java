@@ -1,7 +1,6 @@
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.errors.*;
-import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
@@ -37,7 +36,7 @@ public class GitWrapper implements IGitWrapper {
                 break;
 
             } catch (IOException e) {
-                if (i < 2)
+                if (i < 2) // Should wait some time before trying again?
                     log.log(Level.WARNING, "Failed to open repo, attempt: " + (i + 1) +
                             ", because of exception: " + e.getMessage() + ". Trying again");
                 else {
@@ -179,7 +178,6 @@ public class GitWrapper implements IGitWrapper {
         log.log(Level.INFO, "Successfully deleted branch " + branch.name());
     }
 
-    // Should this return something to confirm tag deletion?
     @Override
     public void deleteTag(Tag tag, ILogWrapper log) {
         log.log(Level.INFO, "Deleting tag " + tag.name());

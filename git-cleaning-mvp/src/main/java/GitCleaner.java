@@ -34,6 +34,7 @@ public class GitCleaner {
 
         if (branches != null) {
             LOGGER.log(Level.INFO, "Checking branches");
+
             for (Branch b : branches) {
                 LOGGER.log(Level.INFO, "Checking branch " + b.name());
 
@@ -65,7 +66,7 @@ public class GitCleaner {
             for (Tag t : tags) {
                 LOGGER.log(Level.INFO, "Checking tag " + t.name());
 
-                if (t.name().matches("zArchiveBranch_\\d{8}_\\w*"))
+                if (!t.name().matches("zArchiveBranch_\\d{8}_\\w*"))
                     continue;
 
                 int commitTime = t.commit().commitTime();

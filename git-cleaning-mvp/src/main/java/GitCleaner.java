@@ -1,3 +1,6 @@
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -21,6 +24,30 @@ public class GitCleaner {
 
 
     public void clean() {
+        LOGGER.log(Level.INFO, "Ensuring local repo is up-to-date");
+
+        UserInfo user = new UserInfo("credentials.properties");
+        GitRemoteHandler remote = new GitRemoteHandler(CONFIG.REPO_DIR, CONFIG.REMOTE_URI, user);
+        Path gitPath = Paths.get(CONFIG.REPO_DIR);
+        Path dirPath = Paths.get(CONFIG.REPO_DIR.substring(0, CONFIG.REPO_DIR.length() - 5));
+
+        boolean updated = false;
+        if (!Files.exists(dirPath) || !Files.exists(gitPath)) {
+            updated = remote.cloneRepo(LOGGER);
+        } else if (Files.exists(dirPath) && Files.exists(gitPath)) {
+//            if (!remote.hasRemote(LOGGER))
+//                remote.addRemote(LOGGER);
+            // This case complicates things a lot. Will get back to it (if needed)
+
+            updated = remote.updateRepo(LOGGER);
+        }
+        if (!updated) {
+            LOGGER.log(Level.SEVERE, "Was not able to update local repo");
+            return;
+        }
+
+        LOGGER.log(Level.INFO, "Local repo is up-to-date");
+
         LOGGER.log(Level.INFO, "Starting cleaning");
 
         GitWrapper git = new GitWrapper(CONFIG.REPO_DIR, LOGGER);

@@ -16,6 +16,7 @@ public class Config {
     public final int K;
     public final List<String> EXCLUDED_BRANCHES;
     public final String REPO_DIR;
+    public final String REMOTE_URI;
 
 
     // Should programmatically writing to config be available?
@@ -32,6 +33,7 @@ public class Config {
             K = Integer.parseInt(props.getProperty("k"));
             EXCLUDED_BRANCHES = Arrays.asList(props.getProperty("excluded branches").split(","));
             REPO_DIR = props.getProperty("repo directory");
+            REMOTE_URI = props.getProperty("remote uri");
 
             reader.close();
 

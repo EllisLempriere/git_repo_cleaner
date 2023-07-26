@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -32,15 +33,11 @@ public class GitCleaner {
         Path dirPath = Paths.get(CONFIG.REPO_DIR.substring(0, CONFIG.REPO_DIR.length() - 5));
 
         boolean updated = false;
-        if (!Files.exists(dirPath) || !Files.exists(gitPath)) {
+        if (!Files.exists(dirPath) || !Files.exists(gitPath))
             updated = remote.cloneRepo(LOGGER);
-        } else if (Files.exists(dirPath) && Files.exists(gitPath)) {
-//            if (!remote.hasRemote(LOGGER))
-//                remote.addRemote(LOGGER);
-            // This case complicates things a lot. Will get back to it (if needed)
-
+        else if (Files.exists(dirPath) && Files.exists(gitPath))
             updated = remote.updateRepo(LOGGER);
-        }
+
         if (!updated) {
             LOGGER.log(Level.SEVERE, "Was not able to update local repo");
             return;
@@ -59,6 +56,7 @@ public class GitCleaner {
         // it will get archived on the first day and will not get deleted until another run the next day
         // Change this behavior?
 
+        List<Branch> deletedBranches = new ArrayList<>();
         if (branches != null) {
             LOGGER.log(Level.INFO, "Checking branches");
 
@@ -80,13 +78,16 @@ public class GitCleaner {
 
                     boolean tagCreated = git.setTag(newArchiveTag, LOGGER);
 
-                    if (tagCreated)
+                    if (tagCreated) {
                         git.deleteBranch(b, LOGGER);
+                        deletedBranches.add(b);
+                    }
                 }
             }
         }
         LOGGER.log(Level.INFO, "Finished checking branches");
 
+        List<Tag> deletedTags = new ArrayList<>();
         if (tags != null) {
             LOGGER.log(Level.INFO, "Checking tags");
 
@@ -104,12 +105,28 @@ public class GitCleaner {
                 } else if (daysSinceCommit >= CONFIG.N + CONFIG.M) {
                     // Send email for archive tag deletion
                     git.deleteTag(t, LOGGER);
+                    deletedTags.add(t);
                 }
             }
             LOGGER.log(Level.INFO, "Finished checking tags");
         }
 
         LOGGER.log(Level.INFO, "Successfully finished cleaning");
+
+        LOGGER.log(Level.INFO, "Pushing updates to remote repo");
+
+        if (!deletedBranches.isEmpty())
+            if (remote.pushBranchDeletions(deletedBranches, LOGGER))
+                LOGGER.log(Level.SEVERE, "Unable to push branch changes");
+
+        if (!remote.pushNewTags(LOGGER))
+            LOGGER.log(Level.SEVERE, "Unable to push new tags");
+
+        if (!deletedTags.isEmpty())
+            if (!remote.pushTagDeletions(deletedTags, LOGGER))
+                LOGGER.log(Level.SEVERE, "Unable to push tag deletions to remote");
+
+        LOGGER.log(Level.INFO, "Updates successfully pushed to remote repo");
     }
 
 

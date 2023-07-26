@@ -3,14 +3,10 @@ import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.MergeCommand;
 import org.eclipse.jgit.api.errors.*;
 import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.transport.CredentialsProvider;
-import org.eclipse.jgit.transport.RemoteConfig;
-import org.eclipse.jgit.transport.URIish;
-import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
+import org.eclipse.jgit.transport.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.List;
 
 public class GitRemoteHandler implements IGitRemoteHandler {
@@ -87,11 +83,21 @@ public class GitRemoteHandler implements IGitRemoteHandler {
     }
 
     @Override
-    public boolean hasRemote(ILogWrapper log) {
+    public boolean pushBranchDeletions(List<Branch> branches, ILogWrapper log) {
         try (Git git = Git.open(new File(FILE_PATH))) {
-            List<RemoteConfig> remotes = git.remoteList().call();
+            for (Branch b : branches) {
+                RefSpec refSpec = new RefSpec()
+                        .setSource(null)
+                        .setDestination("refs/heads/" + b.name());
 
-            return !remotes.isEmpty();
+                git.push()
+                        .setRefSpecs(refSpec)
+                        .setRemote("origin")
+                        .setCredentialsProvider(credentials)
+                        .call();
+            }
+
+            return true;
 
         } catch (IOException | GitAPIException e) {
             return false;
@@ -99,14 +105,43 @@ public class GitRemoteHandler implements IGitRemoteHandler {
     }
 
     @Override
-    public void addRemote(ILogWrapper log) {
+    public boolean pushNewTags(ILogWrapper log) {
         try (Git git = Git.open(new File(FILE_PATH))) {
-            git.remoteAdd()
-                    .setUri(new URIish(REMOTE_URI))
-                    .setName("origin")
+            List<Ref> tags = git.tagList().call();
+
+            if (!tags.isEmpty())
+                git.push()
+                    .setPushTags()
+                    .setRemote("origin")
+                    .setCredentialsProvider(credentials)
                     .call();
 
-        } catch (IOException | GitAPIException | URISyntaxException ignored) {
+            return true;
+
+        } catch (IOException | GitAPIException e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean pushTagDeletions(List<Tag> tags, ILogWrapper log) {
+        try (Git git = Git.open(new File(FILE_PATH))) {
+            for (Tag t : tags) {
+                RefSpec refSpec = new RefSpec()
+                        .setSource(null)
+                        .setDestination("refs/tags/" + t.name());
+
+                git.push()
+                        .setRefSpecs(refSpec)
+                        .setRemote("origin")
+                        .setCredentialsProvider(credentials)
+                        .call();
+            }
+
+            return true;
+
+        } catch (IOException | GitAPIException e) {
+            return false;
         }
     }
 }

@@ -48,6 +48,7 @@ public class GitCleaner {
         LOGGER.log(Level.INFO, "Starting cleaning");
 
         GitWrapper git = new GitWrapper(CONFIG.REPO_DIR, LOGGER);
+        IEmailSender sender = new EmailSender();
 
         List<Branch> branches = git.getBranches(LOGGER);
         List<Tag> tags = git.getTags(LOGGER);
@@ -70,10 +71,23 @@ public class GitCleaner {
                 int daysSinceCommit = (executionTime - commitTime) / 86400;
 
                 if (daysSinceCommit == CONFIG.N - CONFIG.K) {
-                    // Send email for pending archival
+                    Email email = new Email(b.commits().get(0).author(),
+                            String.format("Branch %s will be archived in %d days", b.name(), CONFIG.K));
+                    if (sender.sendEmail(email))
+                        LOGGER.log(Level.INFO,
+                                String.format("Notification of pending archival for branch %s sent to %s",
+                                b.name(), email.to().email()));
+
                 } else if (daysSinceCommit >= CONFIG.N) {
-                    // Send email for archival
                     Tag newArchiveTag = buildArchiveTag(b);
+
+                    Email email = new Email(b.commits().get(0).author(),
+                            String.format("Branch %s archived as %s", b.name(), newArchiveTag.name()));
+                    if (sender.sendEmail(email))
+                        LOGGER.log(Level.INFO,
+                                String.format("Notification of archival of branch %s sent to %s",
+                                b.name(), email.to().email()));
+
                     LOGGER.log(Level.INFO, "Archiving branch " + b.name() + " as " +  newArchiveTag.name());
 
                     boolean tagCreated = git.setTag(newArchiveTag, LOGGER);
@@ -101,9 +115,21 @@ public class GitCleaner {
                 int daysSinceCommit = (executionTime - commitTime) / 86400;
 
                 if (daysSinceCommit == CONFIG.N + CONFIG.M - CONFIG.K) {
-                    // Send email for pending archive tag deletion
+                    Email email = new Email(t.commit().author(),
+                            String.format("Archive tag %s will be deleted in %d days", t.name(), CONFIG.K));
+                    if (sender.sendEmail(email))
+                        LOGGER.log(Level.INFO,
+                                String.format("Notification of pending archive tag deletion of tag %s sent to %s",
+                                t.name(), email.to().email()));
+
                 } else if (daysSinceCommit >= CONFIG.N + CONFIG.M) {
-                    // Send email for archive tag deletion
+                    Email email = new Email(t.commit().author(),
+                            String.format("Archive tag %s deleted", t.name()));
+                    if (sender.sendEmail(email))
+                        LOGGER.log(Level.INFO,
+                                String.format("Notification of archive tag deletion of tag %s sent to %s",
+                                t.name(), email.to().email()));
+
                     git.deleteTag(t, LOGGER);
                     deletedTags.add(t);
                 }

@@ -10,6 +10,7 @@ public class UserInfo {
     public final String PASSWORD;
 
 
+    // TODO Handle case where this fails
     public UserInfo(String userInfoFile) {
         try {
             File infoFile = new File(userInfoFile);

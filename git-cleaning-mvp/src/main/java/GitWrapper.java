@@ -1,11 +1,16 @@
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.LogCommand;
+import org.eclipse.jgit.api.MergeCommand;
 import org.eclipse.jgit.api.errors.*;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.transport.CredentialsProvider;
+import org.eclipse.jgit.transport.RefSpec;
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,203 +18,370 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
-// This class will assume the repo exists locally. Another class will take care setting it up if needed
+
 public class GitWrapper implements IGitWrapper {
 
+    private final Config CONFIG;
+    private final CredentialsProvider CREDENTIALS;
     private Repository repo;
-    private final Git git;
+    private Git git;
 
-
-    public GitWrapper(String filePath, ILogWrapper log) {
-        log.log(Level.INFO, "Initializing Git");
-
-        File directory = new File(filePath);
-
-        for (int i = 0; i < 3; i++) {
-            FileRepositoryBuilder repoBuilder = new FileRepositoryBuilder();
-            try (Repository repo = repoBuilder.setGitDir(directory)
-                    .readEnvironment()
-                    .findGitDir()
-                    .build()) {
-
-                this.repo = repo;
-                break;
-
-            } catch (IOException e) {
-                if (i < 2) // Should wait some time before trying again?
-                    log.log(Level.WARNING, "Failed to open repo, attempt: " + (i + 1) +
-                            ", because of exception: " + e.getMessage() + ". Trying again");
-                else {
-                    log.log(Level.SEVERE, "Repo could not be opened because exception: " + e.getMessage());
-                    throw new RuntimeException(); // Custom exception?
-                }
-            }
-        }
-
-        try (Git git = new Git(repo)) {
-            this.git = git;
-        }
-
-        log.log(Level.INFO, "Git successfully initialized");
+    public GitWrapper(Config config) {
+        this.CONFIG = config;
+        this.CREDENTIALS = new UsernamePasswordCredentialsProvider(config.USER_INFO.USERNAME, config.USER_INFO.PASSWORD);
     }
 
 
     @Override
+    public boolean startGit(ILogWrapper log) {
+        log.log(Level.INFO, "Starting up git");
+
+        int count = 0;
+        while (true) {
+            FileRepositoryBuilder repoBuilder = new FileRepositoryBuilder();
+            try (Repository repo = repoBuilder
+                    .setGitDir(new File(CONFIG.REPO_DIR))
+                    .readEnvironment()
+                    .findGitDir()
+                    .build();
+                Git git = new Git(repo)) {
+
+                this.repo = repo;
+                this.git = git;
+
+                return true;
+
+            } catch (IOException e) {
+                if (++count == CONFIG.RETRIES) {
+                    log.log(Level.SEVERE,
+                            String.format("Failed to start git because of exception: %s. Quitting execution",
+                            e.getMessage()));
+
+                    return false;
+                } else
+                    log.log(Level.WARNING,
+                            String.format("Git startup failed attempt %d from exception \"%s\" - Trying again",
+                            count, e.getMessage()));
+            }
+        }
+    }
+
+    @Override
+    public boolean updateRepo(ILogWrapper log) {
+        log.log(Level.INFO,
+                String.format("Updating local repo at %s from remote repo %s", CONFIG.REPO_DIR, CONFIG.REMOTE_URI));
+
+        int count = 0;
+        while (true) {
+            try {
+                git.pull()
+                        .setFastForward(MergeCommand.FastForwardMode.FF_ONLY)
+                        .setCredentialsProvider(CREDENTIALS)
+                        .call();
+
+                List<Ref> remoteBranches = git.branchList()
+                        .setListMode(ListBranchCommand.ListMode.REMOTE)
+                        .call();
+                List<Ref> localBranches = git.branchList()
+                        .call();
+
+                List<Ref> remoteOnlyBranches = getRemoteOnlyBranches(remoteBranches, localBranches);
+                for (Ref b : remoteOnlyBranches) {
+                    git.checkout().setName(b.getName()).call();
+                    git.branchCreate().setName(getRefName(b)).call();
+                }
+
+                String trunkBranch = getRefName(remoteBranches.get(remoteBranches.size() - 1));
+                git.checkout().setName(trunkBranch).call();
+
+                return true;
+
+            } catch (GitAPIException e) {
+                if (++count == CONFIG.RETRIES) {
+                    log.log(Level.SEVERE,
+                            String.format("Failed to update local repo because of exception: %s. Quitting execution",
+                            e.getMessage()));
+
+                    return false;
+                } else
+                    log.log(Level.WARNING,
+                            String.format("Local repo update failed attempt %d from exception \"%s\" - Trying again",
+                            count, e.getMessage()));
+            }
+        }
+    }
+
+    @Override
     public List<Branch> getBranches(ILogWrapper log) {
         log.log(Level.INFO, "Fetching branch list");
-
         List<Branch> branches = new ArrayList<>();
 
-        for (int i = 0; i < 3; i++) {
+        int count = 0;
+        while (true) {
             try {
                 List<Ref> rawBranches = git.branchList().call();
-
                 for (Ref b : rawBranches) {
-                    String[] refPath = b.getName().split("/");
-                    String branchName = refPath[refPath.length - 1];
-
+                    String branchName = getRefName(b);
                     List<Commit> commits = getBranchCommitList(branchName);
 
                     branches.add(new Branch(branchName, commits));
                 }
-                break;
+
+                return branches;
 
             } catch (GitAPIException | IOException e) {
-                if (i < 2)
-                    log.log(Level.WARNING, "Failed to fetch branches, attempt: " + (i + 1) +
-                            ", because of exception: " + e.getMessage() + ". Trying again");
-                else {
-                    log.log(Level.SEVERE, "Branches could not be fetched because exception: " + e.getMessage());
+                if (++count == CONFIG.RETRIES) {
+                    log.log(Level.SEVERE,
+                            String.format("Failed to fetch branch list because of exception: %s. Quitting execution",
+                            e.getMessage()));
+
                     return null;
-                }
+                } else
+                    log.log(Level.WARNING,
+                            String.format("Branch list fetch failed attempt %d from exception \"%s\" - Trying again",
+                            count, e.getMessage()));
             }
         }
-
-        log.log(Level.INFO, "Successfully obtained branch list");
-        return branches;
     }
 
     @Override
     public List<Tag> getTags(ILogWrapper log) {
         log.log(Level.INFO, "Fetching tag list");
-
         List<Tag> tags = new ArrayList<>();
 
-        for (int i = 0; i < 3; i++) {
+        int count = 0;
+        while (true) {
             try {
                 List<Ref> rawTags = git.tagList().call();
 
                 for (Ref t : rawTags) {
-                    String[] refPath = t.getName().split("/");
-                    String tagName = refPath[refPath.length - 1];
-
+                    String tagName = getRefName(t);
                     Commit commit = getTagCommit(t);
 
                     tags.add(new Tag(tagName, commit));
                 }
-                break;
+
+                return tags;
 
             } catch (GitAPIException | IOException e) {
-                if (i < 2)
-                    log.log(Level.WARNING, "Failed to fetch tags, attempt: " + (i + 1) +
-                            ", because of exception: " + e.getMessage() + ". Trying again");
-                else {
-                    log.log(Level.SEVERE, "Tags could not be fetched because exception: " + e.getMessage());
+                if (++count == CONFIG.RETRIES) {
+                    log.log(Level.SEVERE,
+                            String.format("Failed to fetch tag list because of exception: %s. Quitting execution",
+                            e.getMessage()));
+
                     return null;
-                }
+                } else
+                    log.log(Level.WARNING,
+                            String.format("Tag list fetch failed attempt %d from exception \"%s\" - Trying again",
+                            count, e.getMessage()));
             }
         }
-
-        log.log(Level.INFO, "Successfully obtained tag list");
-        return tags;
     }
 
     @Override
     public boolean setTag(Tag tag, ILogWrapper log) {
         log.log(Level.INFO, "Adding tag " + tag.name());
 
-        for (int i = 0; i < 3; i++) {
+        int count = 0;
+        while (true) {
             try {
                 RevCommit commit = git.log().add(repo.resolve(tag.commit().commitId())).call().iterator().next();
-
                 git.tag().setName(tag.name()).setObjectId(commit).call();
 
-                break;
+                return true;
 
             } catch (GitAPIException | IOException e) {
-                if (i < 2)
-                    log.log(Level.WARNING, "Failed to create tag " + tag.name() +
-                            " attempt: " + (i + 1) + ", because of exception: " + e.getMessage() + ". Trying again");
-                else {
-                    log.log(Level.SEVERE, "Tag " + tag.name() +
-                            " could not be created because exception: " + e.getMessage());
+                if (++count == CONFIG.RETRIES) {
+                    log.log(Level.SEVERE,
+                            String.format("Failed to set tag because of exception: %s. Skipping archival for branch",
+                            e.getMessage()));
+
                     return false;
-                }
+                } else
+                    log.log(Level.WARNING,
+                            String.format("Tag setting failed attempt %d from exception \"%s\" - Trying again",
+                            count, e.getMessage()));
             }
         }
-
-        log.log(Level.INFO, "Successfully added tag " + tag.name());
-        return true;
     }
 
     @Override
-    public void deleteBranch(Branch branch, ILogWrapper log) {
+    public boolean deleteBranch(Branch branch, ILogWrapper log) {
         log.log(Level.INFO, "Deleting branch " + branch.name());
 
-        for (int i = 0; i < 3; i++) {
+        int count = 0;
+        while (true) {
             try {
                 git.branchDelete().setBranchNames(branch.name()).setForce(true).call();
 
-                break;
+                return true;
 
             } catch (GitAPIException e) {
-                if (i < 2)
-                    log.log(Level.WARNING, "Failed to delete branch " + branch.name() +
-                            " attempt: " + (i + 1) + ", because of exception: " + e.getMessage() + ". Trying again");
-                else {
-                    log.log(Level.SEVERE, "Branch " + branch.name() +
-                            " could not be deleted because exception: " + e.getMessage());
-                    throw new RuntimeException(); // Custom exception?
-                    // Execution should continue even if branch cannot be deleted
-                }
+                if (++count == CONFIG.RETRIES) {
+                    log.log(Level.SEVERE,
+                            String.format("Failed to delete branch because of exception: %s. Skipping archival for branch",
+                            e.getMessage()));
+
+                    return false;
+                } else
+                    log.log(Level.WARNING,
+                            String.format("Branch deletion failed attempt %d from exception \"%s\" - Trying again",
+                            count, e.getMessage()));
             }
         }
-
-        log.log(Level.INFO, "Successfully deleted branch " + branch.name());
     }
 
     @Override
-    public void deleteTag(Tag tag, ILogWrapper log) {
+    public boolean deleteTag(Tag tag, ILogWrapper log) {
         log.log(Level.INFO, "Deleting tag " + tag.name());
 
-        for (int i = 0; i < 3; i++) {
+        int count = 0;
+        while (true) {
             try {
                 git.tagDelete().setTags(tag.name()).call();
 
-                break;
+                return true;
 
             } catch (GitAPIException e) {
-                if (i < 2)
-                    log.log(Level.WARNING, "Failed to delete tag " + tag.name() +
-                            " attempt: " + (i + 1) + ", because of exception: " + e.getMessage() + ". Trying again");
-                else {
-                    log.log(Level.SEVERE, "Tag " + tag.name() +
-                            " could not be deleted because exception: " + e.getMessage());
-                    throw new RuntimeException(); // Custom exception?
-                    // Execution should continue even if tag cannot be deleted?
-                }
+                if (++count == CONFIG.RETRIES) {
+                    log.log(Level.SEVERE,
+                            String.format("Failed to delete tag because of exception: %s",
+                            e.getMessage()));
+
+                    return false;
+                } else
+                    log.log(Level.WARNING,
+                            String.format("Tag deletion failed attempt %d from exception \"%s\" - Trying again",
+                            count, e.getMessage()));
             }
         }
-
-        log.log(Level.INFO, "Successfully deleted tag " + tag.name());
     }
 
+    @Override
+    public void pushDeletedBranch(Branch branch, ILogWrapper log) {
+        int count = 0;
+        while (true) {
+            try {
+                RefSpec refSpec = new RefSpec()
+                        .setSource(null)
+                        .setDestination("refs/heads/" + branch.name());
+
+                git.push()
+                        .setRefSpecs(refSpec)
+                        .setRemote("origin")
+                        .setCredentialsProvider(CREDENTIALS)
+                        .call();
+
+                log.log(Level.INFO,
+                        String.format("Successfully updated remote with deletion of branch %s", branch.name()));
+                return;
+
+            } catch (GitAPIException e) {
+                if (++count == CONFIG.RETRIES) {
+                    log.log(Level.SEVERE,
+                            String.format("Failed to push deletion of branch %s because of exception: %s",
+                            branch.name(), e.getMessage()));
+
+                    return;
+                } else
+                    log.log(Level.WARNING,
+                            String.format("Deletion of branch %s push failed attempt %d from exception \"%s\" - Trying again",
+                            branch.name(), count, e.getMessage()));
+            }
+        }
+    }
+
+    @Override
+    public void pushNewTags(ILogWrapper log) {
+        int count = 0;
+        while (true) {
+            try {
+                List<Ref> tags = git.tagList().call();
+
+                if (!tags.isEmpty())
+                    git.push()
+                            .setPushTags()
+                            .setRemote("origin")
+                            .setCredentialsProvider(CREDENTIALS)
+                            .call();
+
+                log.log(Level.INFO, "Successfully updated remote with newly created tags");
+                return;
+
+            } catch (GitAPIException e) {
+                if (++count == CONFIG.RETRIES) {
+                    log.log(Level.SEVERE,
+                            String.format("Failed to push new tags because of exception: %s",
+                            e.getMessage()));
+
+                    return;
+                } else
+                    log.log(Level.WARNING,
+                            String.format("New tags push failed attempt %d from exception \"%s\" - Trying again",
+                            count, e.getMessage()));
+            }
+        }
+    }
+
+    @Override
+    public void pushDeletedTag(Tag tag, ILogWrapper log) {
+        int count = 0;
+        while (true) {
+            try {
+                RefSpec refSpec = new RefSpec()
+                        .setSource(null)
+                        .setDestination("refs/tags/" + tag.name());
+
+                git.push()
+                        .setRefSpecs(refSpec)
+                        .setRemote("origin")
+                        .setCredentialsProvider(CREDENTIALS)
+                        .call();
+
+
+            } catch (GitAPIException e) {
+                if (++count == CONFIG.RETRIES) {
+                    log.log(Level.SEVERE,
+                            String.format("Failed to push deletion of tag %s because of exception: %s",
+                            tag.name(), e.getMessage()));
+
+                    return;
+                } else
+                    log.log(Level.WARNING,
+                            String.format("Deletion of tag %s push failed attempt %d from exception \"%s\" - Trying again",
+                            tag.name(), count, e.getMessage()));
+            }
+        }
+    }
+
+
+    private String getRefName(Ref ref) {
+        String[] refPath = ref.getName().split("/");
+        return refPath[refPath.length - 1];
+    }
+
+    private List<Ref> getRemoteOnlyBranches(List<Ref> remoteBranches, List<Ref> localBranches) {
+        List<Ref> onlyRemoteBranches = new ArrayList<>();
+
+        for (Ref rb : remoteBranches) {
+            boolean branchOnBoth = false;
+            for (Ref lb : localBranches) {
+                if (rb.getObjectId().compareTo(lb.getObjectId()) == 0) {
+                    branchOnBoth = true;
+                    break;
+                }
+            }
+            if (branchOnBoth)
+                onlyRemoteBranches.add(rb);
+        }
+
+        return onlyRemoteBranches;
+    }
 
     private List<Commit> getBranchCommitList(String branchName) throws IOException, GitAPIException {
         List<Commit> commits = new ArrayList<>();
 
         Iterable<RevCommit> rawCommits = git.log().add(repo.resolve(branchName)).call();
-
         for (RevCommit c : rawCommits)
             commits.add(parseRevCommit(c));
 
@@ -217,15 +389,15 @@ public class GitWrapper implements IGitWrapper {
     }
 
     private Commit getTagCommit(Ref tag) throws IOException, GitAPIException {
-        LogCommand logCmd = git.log();
+        LogCommand logCommand = git.log();
 
         Ref peeledRef = repo.getRefDatabase().peel(tag);
         if (peeledRef.getPeeledObjectId() != null)
-            logCmd.add(peeledRef.getPeeledObjectId());
+            logCommand.add(peeledRef.getPeeledObjectId());
         else
-            logCmd.add(tag.getObjectId());
+            logCommand.add(tag.getObjectId());
 
-        Iterable<RevCommit> tagLog = logCmd.call();
+        Iterable<RevCommit> tagLog = logCommand.call();
 
         return parseRevCommit(tagLog.iterator().next());
     }

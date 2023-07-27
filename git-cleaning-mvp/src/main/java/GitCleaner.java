@@ -24,137 +24,71 @@ public class GitCleaner {
     }
 
 
+    // TODO - Handle dependency injections
     public void clean() {
-        LOGGER.log(Level.INFO, "Ensuring local repo is up-to-date");
+        IGitWrapper git = new GitWrapper(CONFIG); // Probably should be injected
+        IEmailHandler email = new EmailHandler(CONFIG);
 
-        UserInfo user = new UserInfo("credentials.properties");
-        GitRemoteHandler remote = new GitRemoteHandler(CONFIG.REPO_DIR, CONFIG.REMOTE_URI, user);
-        Path gitPath = Paths.get(CONFIG.REPO_DIR);
-        Path dirPath = Paths.get(CONFIG.REPO_DIR.substring(0, CONFIG.REPO_DIR.length() - 5));
+        LOGGER.log(Level.INFO, "Checking for local repo");
+        if (!localRepoExist(CONFIG.REPO_DIR)) {
+            LOGGER.log(Level.INFO, "Repo does not exist locally, cloning from remote");
 
-        boolean updated = false;
-        if (!Files.exists(dirPath) || !Files.exists(gitPath))
-            updated = remote.cloneRepo(LOGGER);
-        else if (Files.exists(dirPath) && Files.exists(gitPath))
-            updated = remote.updateRepo(LOGGER);
+            // Should be injected
+            IGitCloner cloner = new GitCloner(CONFIG);
+            if (cloner.cloneRepo(LOGGER))
+                LOGGER.log(Level.INFO, "Repo successfully cloned from remote");
+            else
+                return;
+        }
 
-        if (!updated) {
-            LOGGER.log(Level.SEVERE, "Was not able to update local repo");
+        LOGGER.log(Level.INFO, "Repo exists locally, starting up git and updating from remote");
+        if (git.startGit(LOGGER))
+            LOGGER.log(Level.INFO, "Git successfully started up");
+        else
             return;
-        }
 
-        LOGGER.log(Level.INFO, "Local repo is up-to-date");
+        if (git.updateRepo(LOGGER))
+            LOGGER.log(Level.INFO, "Repo successfully updated from remote");
+        else
+            return;
 
-        LOGGER.log(Level.INFO, "Starting cleaning");
 
-        GitWrapper git = new GitWrapper(CONFIG.REPO_DIR, LOGGER);
-        IEmailSender sender = new EmailSender();
-
+        LOGGER.log(Level.INFO, "Starting cleaning process");
         List<Branch> branches = git.getBranches(LOGGER);
+        if (branches != null)
+            LOGGER.log(Level.INFO, "Branches successfully obtained");
+        else
+            return;
+
         List<Tag> tags = git.getTags(LOGGER);
+        if (tags != null)
+            LOGGER.log(Level.INFO, "Tags successfully obtained");
+        else
+            return;
 
-        // Getting all branches and tags before doing any processing. This way if a branch is older than n+m days,
-        // it will get archived on the first day and will not get deleted until another run the next day
-        // Change this behavior?
+        List<Branch> deletedBranches = checkBranches(git, email, branches);
+        List<Tag> deletedTags = checkTags(git, email, tags);
+        LOGGER.log(Level.INFO, "Finished cleaning");
 
-        List<Branch> deletedBranches = new ArrayList<>();
-        if (branches != null) {
-            LOGGER.log(Level.INFO, "Checking branches");
-
-            for (Branch b : branches) {
-                LOGGER.log(Level.INFO, "Checking branch " + b.name());
-
-                if (CONFIG.EXCLUDED_BRANCHES.contains(b.name()))
-                    continue;
-
-                int commitTime = b.commits().get(0).commitTime();
-                int daysSinceCommit = (executionTime - commitTime) / 86400;
-
-                if (daysSinceCommit == CONFIG.N - CONFIG.K) {
-                    Email email = new Email(b.commits().get(0).author(),
-                            String.format("Branch %s will be archived in %d days", b.name(), CONFIG.K));
-                    if (sender.sendEmail(email))
-                        LOGGER.log(Level.INFO,
-                                String.format("Notification of pending archival for branch %s sent to %s",
-                                b.name(), email.to().email()));
-
-                } else if (daysSinceCommit >= CONFIG.N) {
-                    Tag newArchiveTag = buildArchiveTag(b);
-
-                    Email email = new Email(b.commits().get(0).author(),
-                            String.format("Branch %s archived as %s", b.name(), newArchiveTag.name()));
-                    if (sender.sendEmail(email))
-                        LOGGER.log(Level.INFO,
-                                String.format("Notification of archival of branch %s sent to %s",
-                                b.name(), email.to().email()));
-
-                    LOGGER.log(Level.INFO, "Archiving branch " + b.name() + " as " +  newArchiveTag.name());
-
-                    boolean tagCreated = git.setTag(newArchiveTag, LOGGER);
-
-                    if (tagCreated) {
-                        git.deleteBranch(b, LOGGER);
-                        deletedBranches.add(b);
-                    }
-                }
-            }
-        }
-        LOGGER.log(Level.INFO, "Finished checking branches");
-
-        List<Tag> deletedTags = new ArrayList<>();
-        if (tags != null) {
-            LOGGER.log(Level.INFO, "Checking tags");
-
-            for (Tag t : tags) {
-                LOGGER.log(Level.INFO, "Checking tag " + t.name());
-
-                if (!t.name().matches("zArchiveBranch_\\d{8}_\\w*"))
-                    continue;
-
-                int commitTime = t.commit().commitTime();
-                int daysSinceCommit = (executionTime - commitTime) / 86400;
-
-                if (daysSinceCommit == CONFIG.N + CONFIG.M - CONFIG.K) {
-                    Email email = new Email(t.commit().author(),
-                            String.format("Archive tag %s will be deleted in %d days", t.name(), CONFIG.K));
-                    if (sender.sendEmail(email))
-                        LOGGER.log(Level.INFO,
-                                String.format("Notification of pending archive tag deletion of tag %s sent to %s",
-                                t.name(), email.to().email()));
-
-                } else if (daysSinceCommit >= CONFIG.N + CONFIG.M) {
-                    Email email = new Email(t.commit().author(),
-                            String.format("Archive tag %s deleted", t.name()));
-                    if (sender.sendEmail(email))
-                        LOGGER.log(Level.INFO,
-                                String.format("Notification of archive tag deletion of tag %s sent to %s",
-                                t.name(), email.to().email()));
-
-                    git.deleteTag(t, LOGGER);
-                    deletedTags.add(t);
-                }
-            }
-            LOGGER.log(Level.INFO, "Finished checking tags");
-        }
-
-        LOGGER.log(Level.INFO, "Successfully finished cleaning");
 
         LOGGER.log(Level.INFO, "Pushing updates to remote repo");
+        for (Branch b : deletedBranches)
+            git.pushDeletedBranch(b, LOGGER);
 
-        if (!deletedBranches.isEmpty())
-            if (remote.pushBranchDeletions(deletedBranches, LOGGER))
-                LOGGER.log(Level.SEVERE, "Unable to push branch changes");
+        git.pushNewTags(LOGGER);
 
-        if (!remote.pushNewTags(LOGGER))
-            LOGGER.log(Level.SEVERE, "Unable to push new tags");
-
-        if (!deletedTags.isEmpty())
-            if (!remote.pushTagDeletions(deletedTags, LOGGER))
-                LOGGER.log(Level.SEVERE, "Unable to push tag deletions to remote");
-
+        for (Tag t : deletedTags)
+            git.pushDeletedTag(t, LOGGER);
         LOGGER.log(Level.INFO, "Updates successfully pushed to remote repo");
     }
 
+
+    private boolean localRepoExist(String repoDirectory) {
+        Path gitFolderPath = Paths.get(repoDirectory);
+        Path directoryPath = Paths.get(repoDirectory.substring(0, repoDirectory.length() - 5));
+
+        return Files.exists(directoryPath) && Files.exists(gitFolderPath);
+    }
 
     private Tag buildArchiveTag(Branch branch) {
         StringBuilder tagName = new StringBuilder();
@@ -169,5 +103,119 @@ public class GitCleaner {
         tagName.append(branch.name());
 
         return new Tag(tagName.toString(), branch.commits().get(0));
+    }
+
+
+    // TODO Clean this method up, make less bulky
+    private List<Branch> checkBranches(IGitWrapper git, IEmailHandler email, List<Branch> branches) {
+        List<Branch> deletedBranches = new ArrayList<>();
+        LOGGER.log(Level.INFO, "Checking branches");
+
+        for (Branch b : branches) {
+            LOGGER.log(Level.INFO, "Checking branch " + b.name());
+
+            if (CONFIG.EXCLUDED_BRANCHES.contains(b.name()))
+                continue;
+
+            int commitTime = b.commits().get(0).commitTime();
+            int daysSinceCommit = (executionTime - commitTime) / 86400;
+
+            if (daysSinceCommit == CONFIG.N - CONFIG.K) {
+                Email message = email.buildPendingArchivalEmail(b);
+
+                if (email.sendEmail(message))
+                    LOGGER.log(Level.INFO,
+                            String.format("Notification of pending archival for branch %s sent to %s",
+                            b.name(), message.to().email()));
+                else
+                    LOGGER.log(Level.WARNING,
+                            String.format("Unable to send notification of pending archival for branch %s to %s",
+                            b.name(), message.to().email()));
+
+            } else if (daysSinceCommit >= CONFIG.N) {
+                Tag newArchiveTag = buildArchiveTag(b);
+                LOGGER.log(Level.INFO, String.format("Archiving branch %s as %s", b.name(), newArchiveTag.name()));
+
+                boolean tagCreated = git.setTag(newArchiveTag, LOGGER);
+                if (tagCreated) {
+                    if (git.deleteBranch(b, LOGGER)) {
+                        deletedBranches.add(b);
+                        LOGGER.log(Level.INFO,
+                                String.format("Branch %s successfully archived as %s",
+                                b.name(), newArchiveTag.name()));
+
+                        Email message = email.buildArchivalEmail(b, newArchiveTag);
+                        if (email.sendEmail(message))
+                            LOGGER.log(Level.INFO,
+                                    String.format("Notification of archival of branch %s sent to %s",
+                                    b.name(), message.to().email()));
+                        else
+                            LOGGER.log(Level.WARNING,
+                                    String.format("Unable to send notification of archival of branch %s to %s",
+                                    b.name(), message.to().email()));
+
+                    } else {
+                        git.deleteTag(newArchiveTag, LOGGER);  // May have to account for this failing
+                        LOGGER.log(Level.WARNING,
+                                String.format("Failed to delete branch %s, archive tag %s removed",
+                                b.name(), newArchiveTag.name()));
+                    }
+                } else
+                    LOGGER.log(Level.WARNING,
+                            String.format("Branch %s not archived due to error in tag process", b.name()));
+            }
+        }
+        LOGGER.log(Level.INFO, "Finished checking branches");
+        return deletedBranches;
+    }
+
+    // TODO Clean this method up, make less bulky
+    private List<Tag> checkTags(IGitWrapper git, IEmailHandler email, List<Tag> tags) {
+        List<Tag> deletedTags = new ArrayList<>();
+        LOGGER.log(Level.INFO, "Checking tags");
+
+        for (Tag t : tags) {
+            LOGGER.log(Level.INFO, "Checking tag " + t.name());
+
+            if (!t.name().matches("zArchiveBranch_\\d{8}_\\w*"))
+                continue;
+
+            int commitTime = t.commit().commitTime();
+            int daysSinceCommit = (executionTime - commitTime) / 86400;
+
+            if (daysSinceCommit == CONFIG.N + CONFIG.M - CONFIG.K) {
+                Email message = email.buildPendingTagDeletionEmail(t);
+
+                if (email.sendEmail(message))
+                    LOGGER.log(Level.INFO,
+                            String.format("Notification of pending deletion of tag %s sent to %s",
+                                    t.name(), message.to().email()));
+                else
+                    LOGGER.log(Level.WARNING,
+                            String.format("Unable to send notification of pending tag deletion %s to %s",
+                                    t.name(), message.to().email()));
+
+            } else if (daysSinceCommit >= CONFIG.N + CONFIG.M) {
+                if (git.deleteTag(t, LOGGER)) {
+                    deletedTags.add(t);
+                    LOGGER.log(Level.INFO,
+                            String.format("Successfully deleted archive tag %s", t.name()));
+
+                    Email message = email.buildTagDeletionEmail(t);
+                    if (email.sendEmail(message))
+                        LOGGER.log(Level.INFO,
+                                String.format("Notification of deletion of tag %s sent to %s",
+                                        t.name(), message.to().email()));
+                    else
+                        LOGGER.log(Level.WARNING,
+                                String.format("Unable to send notification of deletion of tag %s to %s",
+                                        t.name(), message.to().email()));
+                } else
+                    LOGGER.log(Level.WARNING,
+                            String.format("Unable to delete archive tag %s", t.name()));
+            }
+        }
+        LOGGER.log(Level.INFO, "Finished checking tags");
+        return deletedTags;
     }
 }

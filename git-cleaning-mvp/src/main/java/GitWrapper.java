@@ -66,6 +66,7 @@ public class GitWrapper implements IGitWrapper {
         }
     }
 
+    // TODO - Account for empty repo
     @Override
     public boolean updateRepo(ILogWrapper log) {
         log.log(Level.INFO,
@@ -74,6 +75,7 @@ public class GitWrapper implements IGitWrapper {
         int count = 0;
         while (true) {
             try {
+                // TODO - Bug on retry
                 git.pull()
                         .setFastForward(MergeCommand.FastForwardMode.FF_ONLY)
                         .setCredentialsProvider(CREDENTIALS)
@@ -338,6 +340,7 @@ public class GitWrapper implements IGitWrapper {
                         .setCredentialsProvider(CREDENTIALS)
                         .call();
 
+                return;
 
             } catch (GitAPIException e) {
                 if (++count == CONFIG.RETRIES) {
@@ -365,13 +368,15 @@ public class GitWrapper implements IGitWrapper {
 
         for (Ref rb : remoteBranches) {
             boolean branchOnBoth = false;
+            String remoteBranchName = getRefName(rb);
             for (Ref lb : localBranches) {
-                if (rb.getObjectId().compareTo(lb.getObjectId()) == 0) {
+                String localBranchName = getRefName(lb);
+                if (remoteBranchName.equals(localBranchName)) {
                     branchOnBoth = true;
                     break;
                 }
             }
-            if (branchOnBoth)
+            if (!branchOnBoth)
                 onlyRemoteBranches.add(rb);
         }
 
@@ -405,7 +410,7 @@ public class GitWrapper implements IGitWrapper {
     private Commit parseRevCommit(RevCommit rawCommit) {
         String commitId = rawCommit.getId().getName();
 
-        int commitTime = rawCommit.getCommitTime();
+        int commitTime = (int) rawCommit.getAuthorIdent().getWhenAsInstant().getEpochSecond();
 
         PersonIdent rawAuthor = rawCommit.getAuthorIdent();
         CommitAuthor author = new CommitAuthor(rawAuthor.getName(), rawAuthor.getEmailAddress());

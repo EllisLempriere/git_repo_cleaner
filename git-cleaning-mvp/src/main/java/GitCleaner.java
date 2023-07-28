@@ -18,30 +18,22 @@ public class GitCleaner {
     private static final int executionTime = 1685682000;
 
 
-    public GitCleaner(Config config, ILogWrapper logger) {
+    public GitCleaner(Config config, ILogWrapper logger, IGitCloner cloner) {
         this.CONFIG = config;
         this.LOGGER = logger;
-    }
-
-
-    // TODO - Handle dependency injections
-    public void clean() {
-        IGitWrapper git = new GitWrapper(CONFIG); // Probably should be injected
-        IEmailHandler email = new EmailHandler(CONFIG);
 
         LOGGER.log(Level.INFO, "Checking for local repo");
         if (!localRepoExist(CONFIG.REPO_DIR)) {
             LOGGER.log(Level.INFO, "Repo does not exist locally, cloning from remote");
 
-            // Should be injected
-            IGitCloner cloner = new GitCloner(CONFIG);
             if (cloner.cloneRepo(LOGGER))
                 LOGGER.log(Level.INFO, "Repo successfully cloned from remote");
-            else
-                return;
         }
+    }
 
-        LOGGER.log(Level.INFO, "Repo exists locally, starting up git and updating from remote");
+
+    public void clean(IGitWrapper git, IEmailHandler email) {
+        LOGGER.log(Level.INFO, "Starting up git and updating from remote");
         if (git.startGit(LOGGER))
             LOGGER.log(Level.INFO, "Git successfully started up");
         else
@@ -106,7 +98,6 @@ public class GitCleaner {
     }
 
 
-    // TODO Clean this method up, make less bulky
     private List<Branch> checkBranches(IGitWrapper git, IEmailHandler email, List<Branch> branches) {
         List<Branch> deletedBranches = new ArrayList<>();
         LOGGER.log(Level.INFO, "Checking branches");
@@ -121,16 +112,7 @@ public class GitCleaner {
             int daysSinceCommit = (executionTime - commitTime) / 86400;
 
             if (daysSinceCommit == CONFIG.N - CONFIG.K) {
-                Email message = email.buildPendingArchivalEmail(b);
-
-                if (email.sendEmail(message))
-                    LOGGER.log(Level.INFO,
-                            String.format("Notification of pending archival for branch %s sent to %s",
-                            b.name(), message.to().email()));
-                else
-                    LOGGER.log(Level.WARNING,
-                            String.format("Unable to send notification of pending archival for branch %s to %s",
-                            b.name(), message.to().email()));
+                notifyPendingArchival(email, b);
 
             } else if (daysSinceCommit >= CONFIG.N) {
                 Tag newArchiveTag = buildArchiveTag(b);
@@ -144,15 +126,7 @@ public class GitCleaner {
                                 String.format("Branch %s successfully archived as %s",
                                 b.name(), newArchiveTag.name()));
 
-                        Email message = email.buildArchivalEmail(b, newArchiveTag);
-                        if (email.sendEmail(message))
-                            LOGGER.log(Level.INFO,
-                                    String.format("Notification of archival of branch %s sent to %s",
-                                    b.name(), message.to().email()));
-                        else
-                            LOGGER.log(Level.WARNING,
-                                    String.format("Unable to send notification of archival of branch %s to %s",
-                                    b.name(), message.to().email()));
+                        notifyArchival(email, b, newArchiveTag);
 
                     } else {
                         git.deleteTag(newArchiveTag, LOGGER);  // May have to account for this failing
@@ -169,7 +143,33 @@ public class GitCleaner {
         return deletedBranches;
     }
 
-    // TODO Clean this method up, make less bulky
+    private void notifyPendingArchival(IEmailHandler email, Branch b) {
+        Email message = email.buildPendingArchivalEmail(b);
+
+        if (email.sendEmail(message))
+            LOGGER.log(Level.INFO,
+                    String.format("Notification of pending archival for branch %s sent to %s",
+                    b.name(), message.to().email()));
+        else
+            LOGGER.log(Level.WARNING,
+                    String.format("Unable to send notification of pending archival for branch %s to %s",
+                    b.name(), message.to().email()));
+    }
+
+    private void notifyArchival(IEmailHandler email, Branch b, Tag newArchiveTag) {
+        Email message = email.buildArchivalEmail(b, newArchiveTag);
+
+        if (email.sendEmail(message))
+            LOGGER.log(Level.INFO,
+                    String.format("Notification of archival of branch %s sent to %s",
+                    b.name(),message.to().email()));
+        else
+            LOGGER.log(Level.WARNING,
+                    String.format("Unable to send notification of archival of branch %s to %s",
+                    b.name(), message.to().email()));
+    }
+
+
     private List<Tag> checkTags(IGitWrapper git, IEmailHandler email, List<Tag> tags) {
         List<Tag> deletedTags = new ArrayList<>();
         LOGGER.log(Level.INFO, "Checking tags");
@@ -177,23 +177,14 @@ public class GitCleaner {
         for (Tag t : tags) {
             LOGGER.log(Level.INFO, "Checking tag " + t.name());
 
-            if (!t.name().matches("zArchiveBranch_\\d{8}_\\w*"))
+            if (!t.name().matches("zArchiveBranch_\\d{8}_[\\w-]+"))
                 continue;
 
             int commitTime = t.commit().commitTime();
             int daysSinceCommit = (executionTime - commitTime) / 86400;
 
             if (daysSinceCommit == CONFIG.N + CONFIG.M - CONFIG.K) {
-                Email message = email.buildPendingTagDeletionEmail(t);
-
-                if (email.sendEmail(message))
-                    LOGGER.log(Level.INFO,
-                            String.format("Notification of pending deletion of tag %s sent to %s",
-                                    t.name(), message.to().email()));
-                else
-                    LOGGER.log(Level.WARNING,
-                            String.format("Unable to send notification of pending tag deletion %s to %s",
-                                    t.name(), message.to().email()));
+                notifyPendingTagDeletion(email, t);
 
             } else if (daysSinceCommit >= CONFIG.N + CONFIG.M) {
                 if (git.deleteTag(t, LOGGER)) {
@@ -201,15 +192,7 @@ public class GitCleaner {
                     LOGGER.log(Level.INFO,
                             String.format("Successfully deleted archive tag %s", t.name()));
 
-                    Email message = email.buildTagDeletionEmail(t);
-                    if (email.sendEmail(message))
-                        LOGGER.log(Level.INFO,
-                                String.format("Notification of deletion of tag %s sent to %s",
-                                        t.name(), message.to().email()));
-                    else
-                        LOGGER.log(Level.WARNING,
-                                String.format("Unable to send notification of deletion of tag %s to %s",
-                                        t.name(), message.to().email()));
+                    notifyTagDeletion(email, t);
                 } else
                     LOGGER.log(Level.WARNING,
                             String.format("Unable to delete archive tag %s", t.name()));
@@ -217,5 +200,31 @@ public class GitCleaner {
         }
         LOGGER.log(Level.INFO, "Finished checking tags");
         return deletedTags;
+    }
+
+    private void notifyPendingTagDeletion(IEmailHandler email, Tag t) {
+        Email message = email.buildPendingTagDeletionEmail(t);
+
+        if (email.sendEmail(message))
+            LOGGER.log(Level.INFO,
+                    String.format("Notification of pending deletion of tag %s sent to %s",
+                    t.name(), message.to().email()));
+        else
+            LOGGER.log(Level.WARNING,
+                    String.format("Unable to send notification of pending tag deletion %s to %s",
+                    t.name(), message.to().email()));
+    }
+
+    private void notifyTagDeletion(IEmailHandler email, Tag t) {
+        Email message = email.buildTagDeletionEmail(t);
+
+        if (email.sendEmail(message))
+            LOGGER.log(Level.INFO,
+                    String.format("Notification of deletion of tag %s sent to %s",
+                    t.name(), message.to().email()));
+        else
+            LOGGER.log(Level.WARNING,
+                    String.format("Unable to send notification of deletion of tag %s to %s",
+                    t.name(), message.to().email()));
     }
 }

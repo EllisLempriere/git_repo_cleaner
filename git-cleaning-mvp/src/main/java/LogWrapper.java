@@ -4,12 +4,13 @@ import java.text.SimpleDateFormat;
 import java.util.logging.*;
 
 // What happens if logger cannot be set up correctly?
+// TODO - Improve all logging messages
 public class LogWrapper implements ILogWrapper {
 
-    private Logger logger = Logger.getLogger("TempLoggerName");
+    private final Logger LOGGER = Logger.getLogger("TempLoggerName");
 
     public LogWrapper() {
-        logger.setLevel(Level.FINE);
+        LOGGER.setLevel(Level.FINE);
 
         DateFormat dateFormat = new SimpleDateFormat("ddMMyyyy");
         String logName = dateFormat.format(System.currentTimeMillis()) + "Log.log";
@@ -18,15 +19,16 @@ public class LogWrapper implements ILogWrapper {
             Handler handler = new FileHandler(logName, 5000, 1);
             handler.setFormatter(new CustomFormatter());
 
-            logger.setUseParentHandlers(false);
-            logger.addHandler(handler);
+            LOGGER.setUseParentHandlers(false);
+            LOGGER.addHandler(handler);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
+    @Override
     public void log(Level level, String message) {
-        logger.log(level, message);
+        LOGGER.log(level, message);
     }
 }

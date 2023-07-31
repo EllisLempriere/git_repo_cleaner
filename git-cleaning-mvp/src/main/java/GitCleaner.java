@@ -58,6 +58,7 @@ public class GitCleaner {
         else
             return;
 
+        // Clean tags and branches
         List<Branch> deletedBranches = checkBranches(git, email, branches);
         List<Tag> deletedTags = checkTags(git, email, tags);
         LOGGER.log(Level.INFO, "Finished cleaning");
@@ -66,6 +67,7 @@ public class GitCleaner {
         LOGGER.log(Level.INFO, "Pushing updates to remote repo");
         for (Branch b : deletedBranches)
             git.pushDeletedBranch(b, LOGGER);
+        // deleteRemoteBranch
 
         git.pushNewTags(LOGGER);
 
@@ -102,10 +104,11 @@ public class GitCleaner {
         List<Branch> deletedBranches = new ArrayList<>();
         LOGGER.log(Level.INFO, "Checking branches");
 
+        // Iterable var name needs to be better
         for (Branch b : branches) {
             LOGGER.log(Level.INFO, "Checking branch " + b.name());
 
-            if (CONFIG.EXCLUDED_BRANCHES.contains(b.name()))
+            if (CONFIG.EXCLUDED_BRANCHES.contains(b.name())) // Log
                 continue;
 
             int commitTime = b.commits().get(0).commitTime();
@@ -137,7 +140,7 @@ public class GitCleaner {
                 } else
                     LOGGER.log(Level.WARNING,
                             String.format("Branch %s not archived due to error in tag process", b.name()));
-            }
+            } // else - deal with other cases
         }
         LOGGER.log(Level.INFO, "Finished checking branches");
         return deletedBranches;

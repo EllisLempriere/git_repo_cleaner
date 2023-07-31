@@ -10,7 +10,7 @@ import java.util.Properties;
 // How does a user do initial setup and edits to config?
 public class Config {
 
-    public final int N;
+    public final int N; // Better naming
     public final int M;
     public final int K;
     public final List<String> EXCLUDED_BRANCHES;
@@ -19,7 +19,7 @@ public class Config {
     public final UserInfo USER_INFO;
     public final int RETRIES;
 
-
+    // Keep as application layer, pass in individual pieces
     // TODO - Take care of case when config setup fails - logging needed
     // Should programmatically writing to config be available?
     public Config(String propertiesFile) {

@@ -32,6 +32,7 @@ public class GitWrapper implements IGitWrapper {
     }
 
 
+    // Remove logging from provider. Use custom exceptions to provide information to business layer
     @Override
     public boolean startGit(ILogWrapper log) {
         log.log(Level.INFO, "Starting up git");

@@ -1,5 +1,6 @@
+package Application;
+
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Properties;
@@ -9,9 +10,7 @@ public class UserInfo {
     public final String USERNAME;
     public final String PASSWORD;
 
-
-    // TODO Handle case where this fails
-    public UserInfo(String userInfoFile) {
+    public UserInfo(String userInfoFile) throws UserInfoSetupException {
         try {
             File infoFile = new File(userInfoFile);
             FileReader reader = new FileReader(infoFile);
@@ -24,10 +23,9 @@ public class UserInfo {
 
             reader.close();
 
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new UserInfoSetupException(
+                    String.format("Failed to read user information from file: '%s'", userInfoFile), e);
         }
     }
 }

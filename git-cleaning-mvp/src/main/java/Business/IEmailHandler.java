@@ -1,3 +1,5 @@
+package Business;
+
 public interface IEmailHandler {
 
     Email buildPendingArchivalEmail(Branch branch);
@@ -8,5 +10,5 @@ public interface IEmailHandler {
 
     Email buildTagDeletionEmail(Tag tag);
 
-    boolean sendEmail(Email email);
+    void sendEmail(Email email) throws SendEmailException;
 }

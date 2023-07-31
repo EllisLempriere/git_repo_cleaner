@@ -1,15 +1,16 @@
+package Application;
+
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.logging.*;
 
 // What happens if logger cannot be set up correctly?
-// TODO - Improve all logging messages
-public class LogWrapper implements ILogWrapper {
+public class CustomLogger implements ICustomLogger {
 
     private final Logger LOGGER = Logger.getLogger("TempLoggerName");
 
-    public LogWrapper() {
+    public CustomLogger() {
         LOGGER.setLevel(Level.FINE);
 
         DateFormat dateFormat = new SimpleDateFormat("ddMMyyyy");

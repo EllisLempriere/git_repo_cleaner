@@ -1,28 +1,24 @@
+package Application;
+
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
-// Does this class need more than just loading in config?
-// How does a user do initial setup and edits to config?
 public class Config {
 
-    public final int N; // Better naming
-    public final int M;
-    public final int K;
+    public final int DAYS_TO_STALE_BRANCH;
+    public final int DAYS_TO_STALE_TAG;
+    public final int PRECEDING_DAYS_TO_WARN;
     public final List<String> EXCLUDED_BRANCHES;
     public final String REPO_DIR;
     public final String REMOTE_URI;
     public final UserInfo USER_INFO;
     public final int RETRIES;
 
-    // Keep as application layer, pass in individual pieces
-    // TODO - Take care of case when config setup fails - logging needed
-    // Should programmatically writing to config be available?
-    public Config(String propertiesFile) {
+    public Config(String propertiesFile) throws ConfigSetupException {
         try {
             File configFile = new File(propertiesFile);
             FileReader reader = new FileReader(configFile);
@@ -30,9 +26,9 @@ public class Config {
             Properties props = new Properties();
             props.load(reader);
 
-            N = Integer.parseInt(props.getProperty("n"));
-            M = Integer.parseInt(props.getProperty("m"));
-            K = Integer.parseInt(props.getProperty("k"));
+            DAYS_TO_STALE_BRANCH = Integer.parseInt(props.getProperty("n"));
+            DAYS_TO_STALE_TAG = Integer.parseInt(props.getProperty("m"));
+            PRECEDING_DAYS_TO_WARN = Integer.parseInt(props.getProperty("k"));
             EXCLUDED_BRANCHES = Arrays.asList(props.getProperty("excluded branches").split(","));
             REPO_DIR = props.getProperty("repo directory");
             REMOTE_URI = props.getProperty("remote uri");
@@ -41,10 +37,12 @@ public class Config {
 
             reader.close();
 
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ConfigSetupException(
+                    String.format("Failed to set up application config from file: '%s'", propertiesFile), e);
+        } catch (UserInfoSetupException e) {
+            throw new ConfigSetupException(
+                    String.format("Failed to read config because: %s", e.getMessage()), e);
         }
     }
 }

@@ -1,19 +1,16 @@
 package Business;
 
 import Business.Models.Branch;
-import Business.Models.NotificationMessage;
 import Business.Models.SendEmailException;
 import Business.Models.Tag;
 
 public interface INotificationHandler {
 
-    NotificationMessage buildPendingArchivalMessage(Branch branch);
+    void sendNotificationPendingArchival(Branch branch) throws SendEmailException;
 
-    NotificationMessage buildArchivalMessage(Branch branch, Tag tag);
+    void sendNotificationArchival(Branch branch, Tag tag) throws SendEmailException;
 
-    NotificationMessage buildPendingTagDeletionMessage(Tag tag);
+    void sendNotificationPendingTagDeletion(Tag tag) throws SendEmailException;
 
-    NotificationMessage buildTagDeletionMessage(Tag tag);
-
-    void sendMessage(NotificationMessage message) throws SendEmailException;
+    void sendNotificationTagDeletion(Tag tag) throws SendEmailException;
 }

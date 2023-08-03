@@ -5,12 +5,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Properties;
 
-public class UserCredentials {
+public class ConfigSecrets {
 
     public final String USERNAME;
     public final String PASSWORD;
 
-    public UserCredentials(String userInfoFile) throws UserInfoSetupException {
+    public ConfigSecrets(String userInfoFile) throws ConfigsSetupException {
         try {
             File infoFile = new File(userInfoFile);
             FileReader reader = new FileReader(infoFile);
@@ -24,8 +24,8 @@ public class UserCredentials {
             reader.close();
 
         } catch (IOException e) {
-            throw new UserInfoSetupException(
-                    String.format("Failed to read user information from file: '%s'", userInfoFile), e);
+            throw new ConfigsSetupException(
+                    String.format("Failed to read config secrets because: %s", e.getMessage()), e);
         }
     }
 }

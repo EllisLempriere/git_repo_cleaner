@@ -4,6 +4,9 @@ import Application.ICustomLogger;
 import Business.Models.*;
 import Provider.*;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -12,42 +15,62 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
-public class GitCleaner implements IGitCleaner {
+public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
     private final int DAYS_TO_STALE_BRANCH;
     private final int DAYS_TO_STALE_TAG;
     private final int PRECEDING_DAYS_TO_WARN;
     private final List<String> EXCLUDED_BRANCHES;
-    private final IGitRepo GIT;
+    private final String REPO_DIR;
+    private final IGitProvider GIT;
     private final INotificationHandler NOTIFICATIONS;
     private final ICustomLogger LOGGER;
+    private boolean started;
 
     // Hardcoded for testing. Will pull from current time in final implementation
     private static final int executionTime = 1685682000;
 
 
-    public GitCleaner(int daysToStaleBranch, int daysToStaleTag, int precedingDaysToWarn,
-                      List<String> excludedBranches, IGitRepo git, INotificationHandler notification, ICustomLogger logger) {
+    public GitRepoCleanerLogic(int daysToStaleBranch, int daysToStaleTag, int precedingDaysToWarn,
+                               List<String> excludedBranches, String repoDir, IGitProvider git,
+                               INotificationHandler notification, ICustomLogger logger) {
         this.DAYS_TO_STALE_BRANCH = daysToStaleBranch;
         this.DAYS_TO_STALE_TAG = daysToStaleTag;
         this.PRECEDING_DAYS_TO_WARN = precedingDaysToWarn;
         this.EXCLUDED_BRANCHES = excludedBranches;
+        this.REPO_DIR = repoDir;
         this.GIT = git;
         this.NOTIFICATIONS = notification;
         this.LOGGER = logger;
+        this.started = false;
     }
 
 
-    public void clean() {
+    @Override
+    public void setup() throws GitCloningException, GitUpdateException, GitStartupException {
+        LOGGER.log(Level.INFO, "Checking if local repo exists");
+        if (!localRepoExist(REPO_DIR)) {
+            LOGGER.log(Level.INFO, "Local repo does not exist, cloning from remote");
+            GIT.cloneRepo();
+
+            LOGGER.log(Level.INFO,
+                    String.format("Repo successfully cloned to local at %s",
+                    REPO_DIR.substring(0, REPO_DIR.length() - 5)));
+        } else
+            LOGGER.log(Level.INFO, "Local repo exists, continuing");
+
+        LOGGER.log(Level.INFO, "Updating local repo");
+        GIT.updateRepo();
+        LOGGER.log(Level.INFO, "Repo successfully updated from remote");
+
+        started = true;
+    }
+
+    public void clean() throws GitCloningException, GitUpdateException, GitStartupException {
+        if (!started)
+            setup();
+
         try {
-            LOGGER.log(Level.INFO, "Starting up git");
-            GIT.startGit();
-            LOGGER.log(Level.INFO, "Git successfully started up");
-
-            LOGGER.log(Level.INFO, "Updating local repo");
-            GIT.updateRepo();
-            LOGGER.log(Level.INFO, "Repo successfully updated from remote");
-
             LOGGER.log(Level.INFO, "Getting branch list");
             List<Branch> branches = GIT.getBranches();
             LOGGER.log(Level.INFO, "Branch list successfully obtained");
@@ -88,12 +111,6 @@ public class GitCleaner implements IGitCleaner {
 
             LOGGER.log(Level.INFO, "All changes pushed to remote");
 
-        } catch (GitStartupException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage());
-            LOGGER.log(Level.SEVERE, "Halting execution due to failing git start up");
-        } catch (GitUpdateException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage());
-            LOGGER.log(Level.SEVERE, "Halting execution due to failing to update local repo");
         } catch (GitBranchFetchException e) { // This exception and down, maybe do not stop execution?
             LOGGER.log(Level.SEVERE, e.getMessage());
             LOGGER.log(Level.SEVERE, "Halting execution due to failure to fetch branch list");
@@ -112,6 +129,14 @@ public class GitCleaner implements IGitCleaner {
         }
     }
 
+
+    private static boolean localRepoExist(String repoDirectory) {
+        Path gitFolderPath = Paths.get(repoDirectory);
+        Path directoryPath = Paths.get(repoDirectory.substring(0, repoDirectory.length() - 5));
+
+        return Files.exists(directoryPath) && Files.exists(gitFolderPath);
+    }
+
     private Tag buildArchiveTag(Branch branch) {
         StringBuilder tagName = new StringBuilder();
 
@@ -128,7 +153,7 @@ public class GitCleaner implements IGitCleaner {
     }
 
 
-    private List<Branch> cleanBranches(List<Branch> branches) {
+    private List<Branch> cleanBranches(List<Branch> branches) throws GitStartupException {
         List<Branch> deletedBranches = new ArrayList<>();
 
         for (Branch branch : branches) {
@@ -166,27 +191,24 @@ public class GitCleaner implements IGitCleaner {
     }
 
     private void notifyPendingArchival(Branch branch) {
-        NotificationMessage message = NOTIFICATIONS.buildPendingArchivalMessage(branch);
-
         try {
-            NOTIFICATIONS.sendMessage(message);
+            NOTIFICATIONS.sendNotificationPendingArchival(branch);
             LOGGER.log(Level.INFO,
-                    String.format("%s notified of pending archival of branch %s",
-                    message.to().get(0).email(), branch.name()));
+                    String.format("Notified pending archival of branch %s", branch.name()));
 
         } catch (SendEmailException e) {
             LOGGER.log(Level.WARNING,
-                    String.format("Failed to notify %s of pending archival of branch %s because %s",
-                    message.to().get(0).email(), branch.name(), e.getMessage()));
+                    String.format("Failed to notify of pending archival of branch %s because %s",
+                    branch.name(), e.getMessage()));
         }
     }
 
-    private void archiveBranch(Branch branch) {
+    private void archiveBranch(Branch branch) throws GitStartupException {
         Tag newArchiveTag = buildArchiveTag(branch);
 
         try {
             LOGGER.log(Level.INFO, "Creating new archive tag " + newArchiveTag.name());
-            GIT.setTag(newArchiveTag);
+            GIT.createTag(newArchiveTag);
             LOGGER.log(Level.INFO, "New archive tag " + newArchiveTag.name() + " successfully created");
 
             LOGGER.log(Level.INFO, "Deleting stale branch " + branch.name());
@@ -219,23 +241,20 @@ public class GitCleaner implements IGitCleaner {
     }
 
     private void notifyArchival(Branch branch, Tag tag) {
-        NotificationMessage message = NOTIFICATIONS.buildArchivalMessage(branch, tag);
-
         try {
-            NOTIFICATIONS.sendMessage(message);
+            NOTIFICATIONS.sendNotificationArchival(branch, tag);
             LOGGER.log(Level.INFO,
-                    String.format("%s notified of archival of branch %s",
-                    message.to().get(0).email(), branch.name()));
+                    String.format("Notified of archival of branch %s", branch.name()));
 
         } catch (SendEmailException e) {
             LOGGER.log(Level.WARNING,
-                    String.format("Failed to notify %s of archival of branch %s because %s",
-                    message.to().get(0).email(), branch.name(), e.getMessage()));
+                    String.format("Failed to notify of archival of branch %s because %s",
+                    branch.name(), e.getMessage()));
         }
     }
 
 
-    private List<Tag> cleanTags(List<Tag> tags) {
+    private List<Tag> cleanTags(List<Tag> tags) throws GitStartupException {
         List<Tag> deletedTags = new ArrayList<>();
 
         for (Tag tag : tags) {
@@ -273,22 +292,19 @@ public class GitCleaner implements IGitCleaner {
     }
 
     private void notifyPendingTagDeletion(Tag tag) {
-        NotificationMessage message = NOTIFICATIONS.buildPendingTagDeletionMessage(tag);
-
         try {
-            NOTIFICATIONS.sendMessage(message);
+            NOTIFICATIONS.sendNotificationPendingTagDeletion(tag);
             LOGGER.log(Level.INFO,
-                    String.format("%s notified of pending deletion of archive tag %s",
-                    message.to().get(0).email(), tag.name()));
+                    String.format("Notified of pending deletion of archive tag %s", tag.name()));
 
         } catch (SendEmailException e) {
             LOGGER.log(Level.WARNING,
-                    String.format("Failed to notify %s of pending deletion of archive tag %s because %s",
-                    message.to().get(0).email(), tag.name(), e.getMessage()));
+                    String.format("Failed to notify of pending deletion of archive tag %s because %s",
+                    tag.name(), e.getMessage()));
         }
     }
 
-    private void deleteArchiveTag(Tag tag) {
+    private void deleteArchiveTag(Tag tag) throws GitStartupException {
         try {
             LOGGER.log(Level.INFO, "Deleting archive tag " + tag.name());
             GIT.deleteTag(tag);
@@ -307,18 +323,15 @@ public class GitCleaner implements IGitCleaner {
     }
 
     private void notifyTagDeletion(Tag tag) {
-        NotificationMessage message = NOTIFICATIONS.buildTagDeletionMessage(tag);
-
         try {
-            NOTIFICATIONS.sendMessage(message);
+            NOTIFICATIONS.sendNotificationTagDeletion(tag);
             LOGGER.log(Level.INFO,
-                    String.format("%s notified of deletion of archive tag %s",
-                    message.to().get(0).email(), tag.name()));
+                    String.format("Notified of deletion of archive tag %s", tag.name()));
 
         } catch (SendEmailException e) {
             LOGGER.log(Level.WARNING,
-                    String.format("Failed to notify %s of deletion of archive tag %s because %s",
-                    message.to().get(0).email(), tag.name(), e.getMessage()));
+                    String.format("Failed to notify of deletion of archive tag %s because %s",
+                    tag.name(), e.getMessage()));
         }
     }
 }

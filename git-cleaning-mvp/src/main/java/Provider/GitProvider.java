@@ -1,6 +1,6 @@
 package Provider;
 
-import Application.UserCredentials;
+import Application.ConfigSecrets;
 import Business.Models.*;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
@@ -22,23 +22,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class GitRepo implements IGitRepo {
+public class GitProvider implements IGitProvider {
 
     private final String REPO_DIR;
+    private final String REMOTE_URI;
     private final CredentialsProvider CREDENTIALS;
     private final int RETRIES;
     private Repository repo;
     private Git git;
+    private boolean initialized;
 
-    public GitRepo(String repoDir, UserCredentials user, int retries) {
+    public GitProvider(String repoDir, String remoteUri, ConfigSecrets user, int retries) {
         this.REPO_DIR = repoDir;
+        this.REMOTE_URI = remoteUri;
         this.CREDENTIALS = new UsernamePasswordCredentialsProvider(user.USERNAME, user.PASSWORD);
         this.RETRIES = retries;
+        this.initialized = false;
     }
 
 
-    @Override
-    public void startGit() throws GitStartupException {
+    private void initialize() throws GitStartupException {
         int count = 0;
         while (true) {
             FileRepositoryBuilder repoBuilder = new FileRepositoryBuilder();
@@ -51,6 +54,7 @@ public class GitRepo implements IGitRepo {
 
                 this.repo = repo;
                 this.git = git;
+                this.initialized = true;
 
                 return;
 
@@ -63,9 +67,38 @@ public class GitRepo implements IGitRepo {
         }
     }
 
+    @Override
+    public void cloneRepo() throws GitCloningException {
+        String targetDirectory = REPO_DIR.substring(0, REPO_DIR.length() - 5);
+
+        int count = 0;
+        while (true) {
+            try (Git ignored = Git.cloneRepository()
+                    .setURI(REMOTE_URI)
+                    .setRemote("origin")
+                    .setDirectory(new File(targetDirectory))
+                    .setCloneAllBranches(true)
+                    .setCredentialsProvider(CREDENTIALS)
+                    .call()) {
+
+                return;
+
+            } catch (GitAPIException e) {
+                if (++count == RETRIES) {
+                    throw new GitCloningException(
+                            String.format("Failed to clone repo after %d attempts due to %s", RETRIES, e.getMessage()),
+                            e);
+                }
+            }
+        }
+    }
+
     // TODO - Account for empty repo
     @Override
-    public void updateRepo() throws GitUpdateException {
+    public void updateRepo() throws GitUpdateException, GitStartupException {
+        if (!initialized)
+            initialize();
+
         int count = 0;
         while (true) {
             try {
@@ -102,7 +135,10 @@ public class GitRepo implements IGitRepo {
     }
 
     @Override
-    public List<Branch> getBranches() throws GitBranchFetchException {
+    public List<Branch> getBranches() throws GitBranchFetchException, GitStartupException {
+        if (!initialized)
+            initialize();
+
         List<Branch> branches = new ArrayList<>();
 
         int count = 0;
@@ -128,7 +164,10 @@ public class GitRepo implements IGitRepo {
     }
 
     @Override
-    public List<Tag> getTags() throws GitTagFetchException {
+    public List<Tag> getTags() throws GitTagFetchException, GitStartupException {
+        if (!initialized)
+            initialize();
+
         List<Tag> tags = new ArrayList<>();
 
         int count = 0;
@@ -155,7 +194,10 @@ public class GitRepo implements IGitRepo {
     }
 
     @Override
-    public void setTag(Tag tag) throws GitSetTagException {
+    public void createTag(Tag tag) throws GitSetTagException, GitStartupException {
+        if (!initialized)
+            initialize();
+
         int count = 0;
         while (true) {
             try {
@@ -174,7 +216,10 @@ public class GitRepo implements IGitRepo {
     }
 
     @Override
-    public void deleteBranch(Branch branch) throws GitBranchDeletionException {
+    public void deleteBranch(Branch branch) throws GitBranchDeletionException, GitStartupException {
+        if (!initialized)
+            initialize();
+
         int count = 0;
         while (true) {
             try {
@@ -192,7 +237,10 @@ public class GitRepo implements IGitRepo {
     }
 
     @Override
-    public void deleteTag(Tag tag) throws GitTagDeletionException {
+    public void deleteTag(Tag tag) throws GitTagDeletionException, GitStartupException {
+        if (!initialized)
+            initialize();
+
         int count = 0;
         while (true) {
             try {
@@ -210,7 +258,10 @@ public class GitRepo implements IGitRepo {
     }
 
     @Override
-    public void pushDeleteRemoteBranch(Branch branch) throws GitPushBranchDeletionException {
+    public void pushDeleteRemoteBranch(Branch branch) throws GitPushBranchDeletionException, GitStartupException {
+        if (!initialized)
+            initialize();
+
         int count = 0;
         while (true) {
             try {
@@ -237,7 +288,10 @@ public class GitRepo implements IGitRepo {
     }
 
     @Override
-    public void pushNewTags() throws GitPushNewTagsException {
+    public void pushNewTags() throws GitPushNewTagsException, GitStartupException {
+        if (!initialized)
+            initialize();
+
         int count = 0;
         while (true) {
             try {
@@ -263,7 +317,10 @@ public class GitRepo implements IGitRepo {
     }
 
     @Override
-    public void pushDeleteRemoteTag(Tag tag) throws GitPushTagDeletionException {
+    public void pushDeleteRemoteTag(Tag tag) throws GitPushTagDeletionException, GitStartupException {
+        if (!initialized)
+            initialize();
+
         int count = 0;
         while (true) {
             try {

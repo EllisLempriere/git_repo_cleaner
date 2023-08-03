@@ -20,7 +20,7 @@ public class NotificationHandler implements INotificationHandler {
     }
 
     @Override
-    public NotificationMessage buildPendingArchivalMessage(Branch branch) {
+    public void sendNotificationPendingArchival(Branch branch) throws SendEmailException {
         CommitAuthor author = branch.commits().get(0).author();
 
         String subject = "Pending archival of branch " + branch.name();
@@ -29,11 +29,11 @@ public class NotificationHandler implements INotificationHandler {
                 "Commit to it again to prevent archival.",
                 branch.name(), DAYS_TO_STALE_BRANCH - PRECEDING_DAYS_TO_WARN, PRECEDING_DAYS_TO_WARN);
 
-        return new NotificationMessage(Collections.singletonList(author), subject, body);
+        sendMessage(new NotificationMessage(Collections.singletonList(author), subject, body));
     }
 
     @Override
-    public NotificationMessage buildArchivalMessage(Branch branch, Tag tag) {
+    public void sendNotificationArchival(Branch branch, Tag tag) throws SendEmailException {
         CommitAuthor author = branch.commits().get(0).author();
 
         String subject = "Archival of branch " + branch.name();
@@ -42,11 +42,11 @@ public class NotificationHandler implements INotificationHandler {
                 "Checkout the tag and recreate the branch to revive it.",
                 branch.name(), DAYS_TO_STALE_BRANCH, tag.name());
 
-        return new NotificationMessage(Collections.singletonList(author), subject, body);
+        sendMessage(new NotificationMessage(Collections.singletonList(author), subject, body));
     }
 
     @Override
-    public NotificationMessage buildPendingTagDeletionMessage(Tag tag) {
+    public void sendNotificationPendingTagDeletion(Tag tag) throws SendEmailException {
         CommitAuthor author = tag.commit().author();
 
         String subject = "Pending deletion of archive tag " + tag.name();
@@ -55,11 +55,11 @@ public class NotificationHandler implements INotificationHandler {
                 "Create a new tag or branch on archive tag or commits will be lost.",
                 tag.name(), DAYS_TO_STALE_TAG - PRECEDING_DAYS_TO_WARN, PRECEDING_DAYS_TO_WARN);
 
-        return new NotificationMessage(Collections.singletonList(author), subject, body);
+        sendMessage(new NotificationMessage(Collections.singletonList(author), subject, body));
     }
 
     @Override
-    public NotificationMessage buildTagDeletionMessage(Tag tag) {
+    public void sendNotificationTagDeletion(Tag tag) throws SendEmailException {
         CommitAuthor author = tag.commit().author();
 
         String subject = "Deletion of archive tag " + tag.name();
@@ -67,10 +67,9 @@ public class NotificationHandler implements INotificationHandler {
         String body = String.format("Archive tag %s has been inactive for %d days. Tag has been deleted, " +
                 "commits no longer guaranteed to be accessible", tag.name(), DAYS_TO_STALE_TAG);
 
-        return new NotificationMessage(Collections.singletonList(author), subject, body);
+        sendMessage(new NotificationMessage(Collections.singletonList(author), subject, body));
     }
 
-    @Override
     public void sendMessage(NotificationMessage message) throws SendEmailException {
         EMAIL.sendNotificationEmail(message);
     }

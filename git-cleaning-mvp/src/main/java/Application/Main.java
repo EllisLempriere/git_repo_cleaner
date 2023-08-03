@@ -22,7 +22,7 @@ public class Main {
             IGitProvider gitProvider = new GitProvider(configs.REPO_DIR, configs.REMOTE_URI,
                     configs.CONFIG_SECRETS, configs.RETRIES);
             IEmailProvider emailProvider = new EmailProvider();
-            INotificationHandler notificationHandler = new NotificationHandler(
+            INotificationLogic notificationHandler = new NotificationLogic(
                     configs.DAYS_TO_STALE_BRANCH, configs.DAYS_TO_STALE_TAG, configs.PRECEDING_DAYS_TO_WARN, emailProvider);
             IGitRepoCleanerLogic gitRepoCleanerLogic = new GitRepoCleanerLogic(
                     configs.DAYS_TO_STALE_BRANCH, configs.DAYS_TO_STALE_TAG, configs.PRECEDING_DAYS_TO_WARN,
@@ -30,8 +30,7 @@ public class Main {
                     gitProvider, notificationHandler, logger);
             logger.log(Level.INFO, "Finished setup");
 
-            GitRepoCleaner gitRepoCleaner = new GitRepoCleaner(gitRepoCleanerLogic, logger);
-            gitRepoCleaner.clean();
+            gitRepoCleanerLogic.cleanRepos();
 
         } catch (ConfigsSetupException e) {
             logger.log(Level.SEVERE, e.getMessage());

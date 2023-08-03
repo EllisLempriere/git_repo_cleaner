@@ -18,7 +18,7 @@ public class CustomLogger implements ICustomLogger {
 
         try {
             Handler handler = new FileHandler(logName, 5000, 1);
-            handler.setFormatter(new CustomFormatter());
+            handler.setFormatter(new CustomLogFormatter());
 
             LOGGER.setUseParentHandlers(false);
             LOGGER.addHandler(handler);

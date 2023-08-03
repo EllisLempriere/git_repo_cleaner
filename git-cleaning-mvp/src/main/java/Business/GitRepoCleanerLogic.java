@@ -23,7 +23,7 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
     private final List<String> EXCLUDED_BRANCHES;
     private final String REPO_DIR;
     private final IGitProvider GIT;
-    private final INotificationHandler NOTIFICATIONS;
+    private final INotificationLogic NOTIFICATIONS;
     private final ICustomLogger LOGGER;
     private boolean started;
 
@@ -33,7 +33,7 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
     public GitRepoCleanerLogic(int daysToStaleBranch, int daysToStaleTag, int precedingDaysToWarn,
                                List<String> excludedBranches, String repoDir, IGitProvider git,
-                               INotificationHandler notification, ICustomLogger logger) {
+                               INotificationLogic notification, ICustomLogger logger) {
         this.DAYS_TO_STALE_BRANCH = daysToStaleBranch;
         this.DAYS_TO_STALE_TAG = daysToStaleTag;
         this.PRECEDING_DAYS_TO_WARN = precedingDaysToWarn;
@@ -47,7 +47,29 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
 
     @Override
-    public void setup() throws GitCloningException, GitUpdateException, GitStartupException {
+    public void cleanRepos() {
+        try {
+            LOGGER.log(Level.INFO, "Setting up local repo");
+            selectRepo();
+
+            LOGGER.log(Level.INFO, "Starting cleaning");
+            cleanRepo();
+            LOGGER.log(Level.INFO, "Successfully finished cleaning, quitting program");
+
+        } catch (GitCloningException e) {
+            LOGGER.log(Level.SEVERE, e.getMessage());
+            LOGGER.log(Level.SEVERE, "Halting execution due to failed remote repo clone");
+        } catch (GitUpdateException e) {
+            LOGGER.log(Level.SEVERE, e.getMessage());
+            LOGGER.log(Level.SEVERE, "Halting execution due to failed local repo update");
+        } catch (GitStartupException e) {
+            LOGGER.log(Level.SEVERE, e.getMessage());
+            LOGGER.log(Level.SEVERE, "Halting execution due to failed initialization of git object");
+        }
+    }
+
+    @Override
+    public void selectRepo() throws GitCloningException, GitUpdateException, GitStartupException {
         LOGGER.log(Level.INFO, "Checking if local repo exists");
         if (!localRepoExist(REPO_DIR)) {
             LOGGER.log(Level.INFO, "Local repo does not exist, cloning from remote");
@@ -66,9 +88,9 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
         started = true;
     }
 
-    public void clean() throws GitCloningException, GitUpdateException, GitStartupException {
+    public void cleanRepo() throws GitCloningException, GitUpdateException, GitStartupException {
         if (!started)
-            setup();
+            selectRepo();
 
         try {
             LOGGER.log(Level.INFO, "Getting branch list");

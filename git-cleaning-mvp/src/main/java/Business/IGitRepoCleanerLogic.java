@@ -6,7 +6,9 @@ import Business.Models.GitUpdateException;
 
 public interface IGitRepoCleanerLogic {
 
-    void setup() throws GitCloningException, GitUpdateException, GitStartupException;
+    void cleanRepos();
 
-    void clean() throws GitCloningException, GitUpdateException, GitStartupException;
+    void selectRepo() throws GitCloningException, GitUpdateException, GitStartupException;
+
+    void cleanRepo() throws GitCloningException, GitUpdateException, GitStartupException;
 }

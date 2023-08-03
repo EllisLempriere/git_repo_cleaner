@@ -1,4 +1,4 @@
-package Provider;
+package Business.Models;
 
 public class GitBranchFetchException extends Exception {
 

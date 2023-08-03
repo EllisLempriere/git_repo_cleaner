@@ -1,6 +1,7 @@
 package Provider;
 
-import Application.UserInfo;
+import Application.UserCredentials;
+import Business.Models.GitCloningException;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.transport.CredentialsProvider;
@@ -15,7 +16,7 @@ public class GitCloner implements IGitCloner {
     private final CredentialsProvider CREDENTIALS;
     private final int RETRIES;
 
-    public GitCloner(String repoDirectory, String remoteUri, UserInfo user, int retries) {
+    public GitCloner(String repoDirectory, String remoteUri, UserCredentials user, int retries) {
         this.DIRECTORY = repoDirectory;
         this.REMOTE_URI = remoteUri;
         this.CREDENTIALS = new UsernamePasswordCredentialsProvider(user.USERNAME, user.PASSWORD);

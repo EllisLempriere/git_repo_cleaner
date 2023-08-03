@@ -1,6 +1,7 @@
 package Business;
 
 import Application.ICustomLogger;
+import Business.Models.*;
 import Provider.*;
 
 import java.time.Instant;
@@ -11,14 +12,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
-public class GitCleaner {
+public class GitCleaner implements IGitCleaner {
 
     private final int DAYS_TO_STALE_BRANCH;
     private final int DAYS_TO_STALE_TAG;
     private final int PRECEDING_DAYS_TO_WARN;
     private final List<String> EXCLUDED_BRANCHES;
-    private final IGitWrapper GIT;
-    private final IEmailHandler MAIL;
+    private final IGitRepo GIT;
+    private final INotificationHandler NOTIFICATIONS;
     private final ICustomLogger LOGGER;
 
     // Hardcoded for testing. Will pull from current time in final implementation
@@ -26,13 +27,13 @@ public class GitCleaner {
 
 
     public GitCleaner(int daysToStaleBranch, int daysToStaleTag, int precedingDaysToWarn,
-                      List<String> excludedBranches, IGitWrapper git, IEmailHandler mail, ICustomLogger logger) {
+                      List<String> excludedBranches, IGitRepo git, INotificationHandler notification, ICustomLogger logger) {
         this.DAYS_TO_STALE_BRANCH = daysToStaleBranch;
         this.DAYS_TO_STALE_TAG = daysToStaleTag;
         this.PRECEDING_DAYS_TO_WARN = precedingDaysToWarn;
         this.EXCLUDED_BRANCHES = excludedBranches;
         this.GIT = git;
-        this.MAIL = mail;
+        this.NOTIFICATIONS = notification;
         this.LOGGER = logger;
     }
 
@@ -165,18 +166,18 @@ public class GitCleaner {
     }
 
     private void notifyPendingArchival(Branch branch) {
-        Email message = MAIL.buildPendingArchivalEmail(branch);
+        NotificationMessage message = NOTIFICATIONS.buildPendingArchivalMessage(branch);
 
         try {
-            MAIL.sendEmail(message);
+            NOTIFICATIONS.sendMessage(message);
             LOGGER.log(Level.INFO,
                     String.format("%s notified of pending archival of branch %s",
-                    message.to().email(), branch.name()));
+                    message.to().get(0).email(), branch.name()));
 
         } catch (SendEmailException e) {
             LOGGER.log(Level.WARNING,
                     String.format("Failed to notify %s of pending archival of branch %s because %s",
-                    message.to().email(), branch.name(), e.getMessage()));
+                    message.to().get(0).email(), branch.name(), e.getMessage()));
         }
     }
 
@@ -218,18 +219,18 @@ public class GitCleaner {
     }
 
     private void notifyArchival(Branch branch, Tag tag) {
-        Email message = MAIL.buildArchivalEmail(branch, tag);
+        NotificationMessage message = NOTIFICATIONS.buildArchivalMessage(branch, tag);
 
         try {
-            MAIL.sendEmail(message);
+            NOTIFICATIONS.sendMessage(message);
             LOGGER.log(Level.INFO,
                     String.format("%s notified of archival of branch %s",
-                    message.to().email(), branch.name()));
+                    message.to().get(0).email(), branch.name()));
 
         } catch (SendEmailException e) {
             LOGGER.log(Level.WARNING,
                     String.format("Failed to notify %s of archival of branch %s because %s",
-                    message.to().email(), branch.name(), e.getMessage()));
+                    message.to().get(0).email(), branch.name(), e.getMessage()));
         }
     }
 
@@ -272,18 +273,18 @@ public class GitCleaner {
     }
 
     private void notifyPendingTagDeletion(Tag tag) {
-        Email message = MAIL.buildPendingTagDeletionEmail(tag);
+        NotificationMessage message = NOTIFICATIONS.buildPendingTagDeletionMessage(tag);
 
         try {
-            MAIL.sendEmail(message);
+            NOTIFICATIONS.sendMessage(message);
             LOGGER.log(Level.INFO,
                     String.format("%s notified of pending deletion of archive tag %s",
-                    message.to().email(), tag.name()));
+                    message.to().get(0).email(), tag.name()));
 
         } catch (SendEmailException e) {
             LOGGER.log(Level.WARNING,
                     String.format("Failed to notify %s of pending deletion of archive tag %s because %s",
-                    message.to().email(), tag.name(), e.getMessage()));
+                    message.to().get(0).email(), tag.name(), e.getMessage()));
         }
     }
 
@@ -306,18 +307,18 @@ public class GitCleaner {
     }
 
     private void notifyTagDeletion(Tag tag) {
-        Email message = MAIL.buildTagDeletionEmail(tag);
+        NotificationMessage message = NOTIFICATIONS.buildTagDeletionMessage(tag);
 
         try {
-            MAIL.sendEmail(message);
+            NOTIFICATIONS.sendMessage(message);
             LOGGER.log(Level.INFO,
                     String.format("%s notified of deletion of archive tag %s",
-                    message.to().email(), tag.name()));
+                    message.to().get(0).email(), tag.name()));
 
         } catch (SendEmailException e) {
             LOGGER.log(Level.WARNING,
                     String.format("Failed to notify %s of deletion of archive tag %s because %s",
-                    message.to().email(), tag.name(), e.getMessage()));
+                    message.to().get(0).email(), tag.name(), e.getMessage()));
         }
     }
 }

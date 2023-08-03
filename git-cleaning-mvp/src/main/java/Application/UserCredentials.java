@@ -5,12 +5,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Properties;
 
-public class UserInfo {
+public class UserCredentials {
 
     public final String USERNAME;
     public final String PASSWORD;
 
-    public UserInfo(String userInfoFile) throws UserInfoSetupException {
+    public UserCredentials(String userInfoFile) throws UserInfoSetupException {
         try {
             File infoFile = new File(userInfoFile);
             FileReader reader = new FileReader(infoFile);

@@ -15,7 +15,7 @@ public class Config {
     public final List<String> EXCLUDED_BRANCHES;
     public final String REPO_DIR;
     public final String REMOTE_URI;
-    public final UserInfo USER_INFO;
+    public final UserCredentials USER_INFO;
     public final int RETRIES;
 
     public Config(String propertiesFile) throws ConfigSetupException {
@@ -32,7 +32,7 @@ public class Config {
             EXCLUDED_BRANCHES = Arrays.asList(props.getProperty("excluded branches").split(","));
             REPO_DIR = props.getProperty("repo directory");
             REMOTE_URI = props.getProperty("remote uri");
-            USER_INFO = new UserInfo(props.getProperty("user info"));
+            USER_INFO = new UserCredentials(props.getProperty("user info"));
             RETRIES = Integer.parseInt(props.getProperty("retries"));
 
             reader.close();

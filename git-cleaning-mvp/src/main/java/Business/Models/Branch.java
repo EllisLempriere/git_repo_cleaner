@@ -1,4 +1,4 @@
-package Business;
+package Business.Models;
 
 import java.util.List;
 

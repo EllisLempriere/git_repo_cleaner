@@ -1,10 +1,7 @@
 package Provider;
 
-import Application.UserInfo;
-import Business.Branch;
-import Business.Commit;
-import Business.CommitAuthor;
-import Business.Tag;
+import Application.UserCredentials;
+import Business.Models.*;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.LogCommand;
@@ -25,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class GitWrapper implements IGitWrapper {
+public class GitRepo implements IGitRepo {
 
     private final String REPO_DIR;
     private final CredentialsProvider CREDENTIALS;
@@ -33,7 +30,7 @@ public class GitWrapper implements IGitWrapper {
     private Repository repo;
     private Git git;
 
-    public GitWrapper(String repoDir, UserInfo user, int retries) {
+    public GitRepo(String repoDir, UserCredentials user, int retries) {
         this.REPO_DIR = repoDir;
         this.CREDENTIALS = new UsernamePasswordCredentialsProvider(user.USERNAME, user.PASSWORD);
         this.RETRIES = retries;

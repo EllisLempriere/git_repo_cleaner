@@ -1,4 +1,4 @@
-package Business;
+package Business.Models;
 
 public class SendEmailException extends Exception {
 

@@ -1,11 +1,10 @@
 package Provider;
 
-import Business.Branch;
-import Business.Tag;
+import Business.Models.*;
 
 import java.util.List;
 
-public interface IGitWrapper {
+public interface IGitRepo {
 
     void startGit() throws GitStartupException;
 

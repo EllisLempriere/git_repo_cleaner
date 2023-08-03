@@ -1,4 +1,4 @@
-package Provider;
+package Business.Models;
 
 public class GitSetTagException extends Exception {
 

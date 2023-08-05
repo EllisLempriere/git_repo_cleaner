@@ -10,9 +10,9 @@ public class ConfigSecrets {
     public final String USERNAME;
     public final String PASSWORD;
 
-    public ConfigSecrets(String userInfoFile) throws ConfigsSetupException {
+    public ConfigSecrets(String fileName) throws ConfigsSetupException {
         try {
-            File infoFile = new File(userInfoFile);
+            File infoFile = new File(fileName);
             FileReader reader = new FileReader(infoFile);
 
             Properties props = new Properties();

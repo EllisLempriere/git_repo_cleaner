@@ -13,17 +13,17 @@ public class NotificationLogic implements INotificationLogic {
     private final int PRECEDING_DAYS_TO_WARN;
     private final IEmailProvider EMAIL;
 
-    public NotificationLogic(int daysToStaleBranch, int daysToStaleTag, int precedingDaysToWarn, IEmailProvider email) {
-        this.DAYS_TO_STALE_BRANCH = daysToStaleBranch;
-        this.DAYS_TO_STALE_TAG = daysToStaleTag;
-        this.PRECEDING_DAYS_TO_WARN = precedingDaysToWarn;
+    public NotificationLogic(DaysToActions daysToActions, IEmailProvider email) {
+        this.DAYS_TO_STALE_BRANCH = daysToActions.daysToStaleBranch();
+        this.DAYS_TO_STALE_TAG = daysToActions.daysToStaleTag();
+        this.PRECEDING_DAYS_TO_WARN = daysToActions.precedingDaysToWarn();
         this.EMAIL = email;
     }
 
     @Override
     public void sendNotificationPendingArchival(Branch branch) throws SendEmailException {
-        CommitAuthor author = branch.commits().get(0).author();
-        List<CommitAuthor> recipients = Collections.singletonList(author);
+        String authorEmail = branch.commits().get(0).authorEmail();
+        List<String> recipients = Collections.singletonList(authorEmail);
 
         String subject = "Pending archival of branch " + branch.name();
 
@@ -31,14 +31,14 @@ public class NotificationLogic implements INotificationLogic {
                 "Commit to it again to prevent archival.",
                 branch.name(), DAYS_TO_STALE_BRANCH - PRECEDING_DAYS_TO_WARN, PRECEDING_DAYS_TO_WARN);
 
-        for (CommitAuthor r : recipients)
-            EMAIL.sendEmail(r.name(), r.email(), subject, body);
+        for (String author : recipients)
+            EMAIL.sendEmail(author, subject, body);
     }
 
     @Override
     public void sendNotificationArchival(Branch branch, Tag tag) throws SendEmailException {
-        CommitAuthor author = branch.commits().get(0).author();
-        List<CommitAuthor> recipients = Collections.singletonList(author);
+        String authorEmail = branch.commits().get(0).authorEmail();
+        List<String> recipients = Collections.singletonList(authorEmail);
 
         String subject = "Archival of branch " + branch.name();
 
@@ -46,14 +46,14 @@ public class NotificationLogic implements INotificationLogic {
                 "Checkout the tag and recreate the branch to revive it.",
                 branch.name(), DAYS_TO_STALE_BRANCH, tag.name());
 
-        for (CommitAuthor r : recipients)
-            EMAIL.sendEmail(r.name(), r.email(), subject, body);
+        for (String author : recipients)
+            EMAIL.sendEmail(author, subject, body);
     }
 
     @Override
     public void sendNotificationPendingTagDeletion(Tag tag) throws SendEmailException {
-        CommitAuthor author = tag.commit().author();
-        List<CommitAuthor> recipients = Collections.singletonList(author);
+        String authorEmail = tag.commit().authorEmail();
+        List<String> recipients = Collections.singletonList(authorEmail);
 
         String subject = "Pending deletion of archive tag " + tag.name();
 
@@ -61,21 +61,21 @@ public class NotificationLogic implements INotificationLogic {
                 "Create a new tag or branch on archive tag or commits will be lost.",
                 tag.name(), DAYS_TO_STALE_TAG - PRECEDING_DAYS_TO_WARN, PRECEDING_DAYS_TO_WARN);
 
-        for (CommitAuthor r : recipients)
-            EMAIL.sendEmail(r.name(), r.email(), subject, body);
+        for (String author : recipients)
+            EMAIL.sendEmail(author, subject, body);
     }
 
     @Override
     public void sendNotificationTagDeletion(Tag tag) throws SendEmailException {
-        CommitAuthor author = tag.commit().author();
-        List<CommitAuthor> recipients = Collections.singletonList(author);
+        String authorEmail = tag.commit().authorEmail();
+        List<String> recipients = Collections.singletonList(authorEmail);
 
         String subject = "Deletion of archive tag " + tag.name();
 
         String body = String.format("Archive tag %s has been inactive for %d days. Tag has been deleted, " +
                 "commits no longer guaranteed to be accessible", tag.name(), DAYS_TO_STALE_TAG);
 
-        for (CommitAuthor r : recipients)
-            EMAIL.sendEmail(r.name(), r.email(), subject, body);
+        for (String author : recipients)
+            EMAIL.sendEmail(author, subject, body);
     }
 }

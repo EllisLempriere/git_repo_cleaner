@@ -6,9 +6,11 @@ import java.util.List;
 
 public interface IGitProvider {
 
-    void cloneRepo() throws GitCloningException;
+    void setupRepo(String repoDir, String remoteUri);
 
-    void updateRepo() throws GitUpdateException, GitStartupException;
+    void cloneRepo(String repoDir, String remoteUri) throws GitCloningException;
+
+    void updateRepo(String repoDir) throws GitUpdateException, GitStartupException;
 
     List<Branch> getBranches() throws GitBranchFetchException, GitStartupException;
 

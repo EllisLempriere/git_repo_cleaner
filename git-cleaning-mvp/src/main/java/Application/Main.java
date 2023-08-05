@@ -16,25 +16,22 @@ public class Main {
 
         try {
             logger.log(Level.INFO, "Starting set up");
+            ConfigBuilder configBuilder = new ConfigBuilder("config.json");
+            Configs configs = configBuilder.build();
 
-            Configs configs = new Configs("default_config.properties");
-
-            IGitProvider gitProvider = new GitProvider(configs.REPO_DIR, configs.REMOTE_URI,
-                    configs.CONFIG_SECRETS, configs.RETRIES);
             IEmailProvider emailProvider = new EmailProvider();
-            INotificationLogic notificationHandler = new NotificationLogic(
-                    configs.DAYS_TO_STALE_BRANCH, configs.DAYS_TO_STALE_TAG, configs.PRECEDING_DAYS_TO_WARN, emailProvider);
-            IGitRepoCleanerLogic gitRepoCleanerLogic = new GitRepoCleanerLogic(
-                    configs.DAYS_TO_STALE_BRANCH, configs.DAYS_TO_STALE_TAG, configs.PRECEDING_DAYS_TO_WARN,
-                    configs.EXCLUDED_BRANCHES, configs.REPO_DIR,
-                    gitProvider, notificationHandler, logger);
-            logger.log(Level.INFO, "Finished setup");
+            INotificationLogic notificationLogic = new NotificationLogic(configs.daysToActions(), emailProvider);
+            IGitProvider gitProvider = new GitProvider(configs.configSecrets(), configs.retries());
+            IGitRepoCleanerLogic gitRepoCleanerLogic = new GitRepoCleanerLogic(configs.daysToActions(),
+                    gitProvider, notificationLogic, logger);
+            logger.log(Level.INFO, "Finished bootstrapping");
 
-            gitRepoCleanerLogic.cleanRepos();
+            logger.log(Level.INFO, "Starting cleaning " + configs.repos().size() + " repos");
+            gitRepoCleanerLogic.cleanRepos(configs.repos());
 
         } catch (ConfigsSetupException e) {
-            logger.log(Level.SEVERE, e.getMessage());
-            logger.log(Level.SEVERE, "Halting execution due to failed config set up");
+            // TODO - Handle
+            throw new RuntimeException(e);
         }
     }
 }

@@ -5,7 +5,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.logging.*;
 
-// What happens if logger cannot be set up correctly?
 public class CustomLogger implements ICustomLogger {
 
     private final Logger LOGGER = Logger.getLogger("TempLoggerName");

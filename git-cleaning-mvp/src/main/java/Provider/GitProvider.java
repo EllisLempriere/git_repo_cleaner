@@ -7,7 +7,6 @@ import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.MergeCommand;
 import org.eclipse.jgit.api.errors.*;
-import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -24,29 +23,27 @@ import java.util.List;
 
 public class GitProvider implements IGitProvider {
 
-    private final String REPO_DIR;
-    private final String REMOTE_URI;
     private final CredentialsProvider CREDENTIALS;
     private final int RETRIES;
     private Repository repo;
     private Git git;
     private boolean initialized;
 
-    public GitProvider(String repoDir, String remoteUri, ConfigSecrets user, int retries) {
-        this.REPO_DIR = repoDir;
-        this.REMOTE_URI = remoteUri;
+    public GitProvider(ConfigSecrets user, int retries) {
         this.CREDENTIALS = new UsernamePasswordCredentialsProvider(user.USERNAME, user.PASSWORD);
         this.RETRIES = retries;
         this.initialized = false;
     }
 
 
-    private void initialize() throws GitStartupException {
+    private void initialize(String repoDir) throws GitStartupException {
+        String repoDirectory = repoDir + ".git";
+
         int count = 0;
         while (true) {
             FileRepositoryBuilder repoBuilder = new FileRepositoryBuilder();
             try (Repository repo = repoBuilder
-                    .setGitDir(new File(REPO_DIR))
+                    .setGitDir(new File(repoDirectory))
                     .readEnvironment()
                     .findGitDir()
                     .build();
@@ -68,18 +65,23 @@ public class GitProvider implements IGitProvider {
     }
 
     @Override
-    public void cloneRepo() throws GitCloningException {
-        String targetDirectory = REPO_DIR.substring(0, REPO_DIR.length() - 5);
+    public void setupRepo(String repoDir, String remoteUri) {
 
+    }
+
+    @Override
+    public void cloneRepo(String repoDir, String remoteUri) throws GitCloningException {
         int count = 0;
         while (true) {
             try (Git ignored = Git.cloneRepository()
-                    .setURI(REMOTE_URI)
+                    .setURI(remoteUri)
                     .setRemote("origin")
-                    .setDirectory(new File(targetDirectory))
+                    .setDirectory(new File(repoDir))
                     .setCloneAllBranches(true)
                     .setCredentialsProvider(CREDENTIALS)
                     .call()) {
+
+                initialize(repoDir);
 
                 return;
 
@@ -89,15 +91,18 @@ public class GitProvider implements IGitProvider {
                             String.format("Failed to clone repo after %d attempts due to %s", RETRIES, e.getMessage()),
                             e);
                 }
+            } catch (GitStartupException e) {
+                // TODO - Handle
+                throw new RuntimeException(e);
             }
         }
     }
 
     // TODO - Account for empty repo
     @Override
-    public void updateRepo() throws GitUpdateException, GitStartupException {
+    public void updateRepo(String repoDir) throws GitUpdateException, GitStartupException {
         if (!initialized)
-            initialize();
+            initialize(repoDir);
 
         int count = 0;
         while (true) {
@@ -136,8 +141,8 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public List<Branch> getBranches() throws GitBranchFetchException, GitStartupException {
-        if (!initialized)
-            initialize();
+//        if (!initialized)
+//            initialize();
 
         List<Branch> branches = new ArrayList<>();
 
@@ -165,8 +170,8 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public List<Tag> getTags() throws GitTagFetchException, GitStartupException {
-        if (!initialized)
-            initialize();
+//        if (!initialized)
+//            initialize();
 
         List<Tag> tags = new ArrayList<>();
 
@@ -195,8 +200,8 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void createTag(Tag tag) throws GitSetTagException, GitStartupException {
-        if (!initialized)
-            initialize();
+//        if (!initialized)
+//            initialize();
 
         int count = 0;
         while (true) {
@@ -217,8 +222,8 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void deleteBranch(Branch branch) throws GitBranchDeletionException, GitStartupException {
-        if (!initialized)
-            initialize();
+//        if (!initialized)
+//            initialize();
 
         int count = 0;
         while (true) {
@@ -238,8 +243,8 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void deleteTag(Tag tag) throws GitTagDeletionException, GitStartupException {
-        if (!initialized)
-            initialize();
+//        if (!initialized)
+//            initialize();
 
         int count = 0;
         while (true) {
@@ -259,8 +264,8 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void pushDeleteRemoteBranch(Branch branch) throws GitPushBranchDeletionException, GitStartupException {
-        if (!initialized)
-            initialize();
+//        if (!initialized)
+//            initialize();
 
         int count = 0;
         while (true) {
@@ -289,8 +294,8 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void pushNewTags() throws GitPushNewTagsException, GitStartupException {
-        if (!initialized)
-            initialize();
+//        if (!initialized)
+//            initialize();
 
         int count = 0;
         while (true) {
@@ -318,8 +323,8 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void pushDeleteRemoteTag(Tag tag) throws GitPushTagDeletionException, GitStartupException {
-        if (!initialized)
-            initialize();
+//        if (!initialized)
+//            initialize();
 
         int count = 0;
         while (true) {
@@ -401,9 +406,8 @@ public class GitProvider implements IGitProvider {
 
         int commitTime = (int) rawCommit.getAuthorIdent().getWhenAsInstant().getEpochSecond();
 
-        PersonIdent rawAuthor = rawCommit.getAuthorIdent();
-        CommitAuthor author = new CommitAuthor(rawAuthor.getName(), rawAuthor.getEmailAddress());
+        String authorEmail = rawCommit.getAuthorIdent().getEmailAddress();
 
-        return new Commit(commitId, commitTime, author);
+        return new Commit(commitId, commitTime, authorEmail);
     }
 }

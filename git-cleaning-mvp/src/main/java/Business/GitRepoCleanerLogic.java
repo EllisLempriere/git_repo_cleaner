@@ -17,81 +17,71 @@ import java.util.logging.Level;
 
 public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
-    private final int DAYS_TO_STALE_BRANCH;
-    private final int DAYS_TO_STALE_TAG;
-    private final int PRECEDING_DAYS_TO_WARN;
-    private final List<String> EXCLUDED_BRANCHES;
-    private final String REPO_DIR;
+    private final DaysToActions DAYS_TO_ACTIONS;
     private final IGitProvider GIT;
     private final INotificationLogic NOTIFICATIONS;
     private final ICustomLogger LOGGER;
-    private boolean started;
 
     // Hardcoded for testing. Will pull from current time in final implementation
     private static final int executionTime = 1685682000;
 
 
-    public GitRepoCleanerLogic(int daysToStaleBranch, int daysToStaleTag, int precedingDaysToWarn,
-                               List<String> excludedBranches, String repoDir, IGitProvider git,
+    public GitRepoCleanerLogic(DaysToActions daysToActions, IGitProvider git,
                                INotificationLogic notification, ICustomLogger logger) {
-        this.DAYS_TO_STALE_BRANCH = daysToStaleBranch;
-        this.DAYS_TO_STALE_TAG = daysToStaleTag;
-        this.PRECEDING_DAYS_TO_WARN = precedingDaysToWarn;
-        this.EXCLUDED_BRANCHES = excludedBranches;
-        this.REPO_DIR = repoDir;
+        this.DAYS_TO_ACTIONS = daysToActions;
         this.GIT = git;
         this.NOTIFICATIONS = notification;
         this.LOGGER = logger;
-        this.started = false;
     }
 
 
     @Override
-    public void cleanRepos() {
-        try {
-            LOGGER.log(Level.INFO, "Setting up local repo");
-            selectRepo();
+    public void cleanRepos(List<RepoInfo> repos) {
+        for (RepoInfo repo : repos) {
+            LOGGER.log(Level.INFO, "Beginning cleaning repo with remote: " + repo.remoteUri());
 
-            LOGGER.log(Level.INFO, "Starting cleaning");
-            cleanRepo();
-            LOGGER.log(Level.INFO, "Successfully finished cleaning, quitting program");
+            try {
+                LOGGER.log(Level.INFO, "Setting up local repo at: " + repo.repoDir());
+                GIT.setupRepo(repo.repoDir(), repo.remoteUri());
+                selectRepo(repo.repoDir(), repo.remoteUri());
+                LOGGER.log(Level.INFO, "Local repo set up");
 
-        } catch (GitCloningException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage());
-            LOGGER.log(Level.SEVERE, "Halting execution due to failed remote repo clone");
-        } catch (GitUpdateException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage());
-            LOGGER.log(Level.SEVERE, "Halting execution due to failed local repo update");
-        } catch (GitStartupException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage());
-            LOGGER.log(Level.SEVERE, "Halting execution due to failed initialization of git object");
+                LOGGER.log(Level.INFO, "Starting cleaning");
+                cleanRepo(repo.excludedBranches());
+                LOGGER.log(Level.INFO, "Successfully finished cleaning repo");
+
+            } catch (GitCloningException e) {
+                LOGGER.log(Level.SEVERE, e.getMessage());
+                LOGGER.log(Level.SEVERE, "Halting execution due to failed remote repo clone");
+            } catch (GitUpdateException e) {
+                LOGGER.log(Level.SEVERE, e.getMessage());
+                LOGGER.log(Level.SEVERE, "Halting execution due to failed local repo update");
+            } catch (GitStartupException e) {
+                LOGGER.log(Level.SEVERE, e.getMessage());
+                LOGGER.log(Level.SEVERE, "Halting execution due to failed initialization of git object");
+            }
         }
     }
 
-    @Override
-    public void selectRepo() throws GitCloningException, GitUpdateException, GitStartupException {
+    private void selectRepo(String repoDir, String remoteUri)
+            throws GitCloningException, GitUpdateException, GitStartupException {
         LOGGER.log(Level.INFO, "Checking if local repo exists");
-        if (!localRepoExist(REPO_DIR)) {
+        if (!localRepoExist(repoDir)) {
             LOGGER.log(Level.INFO, "Local repo does not exist, cloning from remote");
-            GIT.cloneRepo();
+            GIT.cloneRepo(repoDir, remoteUri);
 
             LOGGER.log(Level.INFO,
-                    String.format("Repo successfully cloned to local at %s",
-                    REPO_DIR.substring(0, REPO_DIR.length() - 5)));
+                    String.format("Repo successfully cloned to local at %s", repoDir));
         } else
             LOGGER.log(Level.INFO, "Local repo exists, continuing");
 
         LOGGER.log(Level.INFO, "Updating local repo");
-        GIT.updateRepo();
+        GIT.updateRepo(repoDir);
         LOGGER.log(Level.INFO, "Repo successfully updated from remote");
-
-        started = true;
     }
 
-    public void cleanRepo() throws GitCloningException, GitUpdateException, GitStartupException {
-        if (!started)
-            selectRepo();
-
+    private void cleanRepo(List<String> excludedBranches)
+            throws GitCloningException, GitUpdateException, GitStartupException {
         try {
             LOGGER.log(Level.INFO, "Getting branch list");
             List<Branch> branches = GIT.getBranches();
@@ -102,7 +92,7 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
             LOGGER.log(Level.INFO, "Tag list successfully obtained");
 
             LOGGER.log(Level.INFO, "Cleaning branches");
-            List<Branch> deletedBranches = cleanBranches(branches);
+            List<Branch> deletedBranches = cleanBranches(branches, excludedBranches);
             LOGGER.log(Level.INFO, "Finished cleaning branches");
 
             LOGGER.log(Level.INFO, "Cleaning tags");
@@ -153,8 +143,8 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
 
     private static boolean localRepoExist(String repoDirectory) {
-        Path gitFolderPath = Paths.get(repoDirectory);
-        Path directoryPath = Paths.get(repoDirectory.substring(0, repoDirectory.length() - 5));
+        Path gitFolderPath = Paths.get(repoDirectory + ".git");
+        Path directoryPath = Paths.get(repoDirectory);
 
         return Files.exists(directoryPath) && Files.exists(gitFolderPath);
     }
@@ -175,13 +165,13 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
     }
 
 
-    private List<Branch> cleanBranches(List<Branch> branches) throws GitStartupException {
+    private List<Branch> cleanBranches(List<Branch> branches, List<String> excludedBranches) throws GitStartupException {
         List<Branch> deletedBranches = new ArrayList<>();
 
         for (Branch branch : branches) {
             LOGGER.log(Level.INFO, "Checking branch " + branch.name());
 
-            if (EXCLUDED_BRANCHES.contains(branch.name())) {
+            if (excludedBranches.contains(branch.name())) {
                 LOGGER.log(Level.INFO, "Branch " + branch.name() + " is one of excluded branches, skipping");
                 continue;
             }
@@ -189,14 +179,14 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
             int commitTime = branch.commits().get(0).commitTime();
             int daysSinceCommit = (executionTime - commitTime) / 86400;
 
-            if (daysSinceCommit == DAYS_TO_STALE_BRANCH - PRECEDING_DAYS_TO_WARN) {
+            if (daysSinceCommit == DAYS_TO_ACTIONS.daysToStaleBranch() - DAYS_TO_ACTIONS.precedingDaysToWarn()) {
                 LOGGER.log(Level.INFO,
                         String.format("Has been %d days since last commit to branch %s. " +
                         "Notifying developer of pending archival", daysSinceCommit, branch.name()));
 
                 notifyPendingArchival(branch);
 
-            } else if (daysSinceCommit >= DAYS_TO_STALE_BRANCH) {
+            } else if (daysSinceCommit >= DAYS_TO_ACTIONS.daysToStaleBranch()) {
                 LOGGER.log(Level.INFO,
                         String.format("Has been %d days since last commit to branch %s. " +
                         "Archiving branch", daysSinceCommit, branch.name()));
@@ -290,14 +280,15 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
             int commitTime = tag.commit().commitTime();
             int daysSinceCommit = (executionTime - commitTime) / 86400;
 
-            if (daysSinceCommit == DAYS_TO_STALE_BRANCH + DAYS_TO_STALE_TAG - PRECEDING_DAYS_TO_WARN) {
+            if (daysSinceCommit == DAYS_TO_ACTIONS.daysToStaleBranch() + DAYS_TO_ACTIONS.daysToStaleTag()
+                    - DAYS_TO_ACTIONS.precedingDaysToWarn()) {
                 LOGGER.log(Level.INFO,
                         String.format("Has been %d days since last commit on tag %s. " +
                         "Notifying developer of pending deletion", daysSinceCommit, tag.name()));
 
                 notifyPendingTagDeletion(tag);
 
-            } else if (daysSinceCommit >= DAYS_TO_STALE_BRANCH + DAYS_TO_STALE_TAG) {
+            } else if (daysSinceCommit >= DAYS_TO_ACTIONS.daysToStaleBranch() + DAYS_TO_ACTIONS.daysToStaleTag()) {
                 LOGGER.log(Level.INFO,
                         String.format("Has been %d days since last commit to tag %s. " +
                         "Removing archive tag", daysSinceCommit, tag.name()));

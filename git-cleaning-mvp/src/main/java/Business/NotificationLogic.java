@@ -8,16 +8,10 @@ import java.util.List;
 
 public class NotificationLogic implements INotificationLogic {
 
-    private final int DAYS_TO_STALE_BRANCH;
-    private final int DAYS_TO_STALE_TAG;
-    private final int PRECEDING_DAYS_TO_WARN;
-    private final IEmailProvider EMAIL;
+    private final IEmailProvider EMAIL_PROVIDER;
 
-    public NotificationLogic(DaysToActions daysToActions, IEmailProvider email) {
-        this.DAYS_TO_STALE_BRANCH = daysToActions.daysToStaleBranch();
-        this.DAYS_TO_STALE_TAG = daysToActions.daysToStaleTag();
-        this.PRECEDING_DAYS_TO_WARN = daysToActions.precedingDaysToWarn();
-        this.EMAIL = email;
+    public NotificationLogic(IEmailProvider emailProvider) {
+        this.EMAIL_PROVIDER = emailProvider;
     }
 
     @Override
@@ -27,12 +21,11 @@ public class NotificationLogic implements INotificationLogic {
 
         String subject = "Pending archival of branch " + branch.name();
 
-        String body = String.format("Branch %s has been inactive for %d days. Branch will be archived in %d days. " +
-                "Commit to it again to prevent archival.",
-                branch.name(), DAYS_TO_STALE_BRANCH - PRECEDING_DAYS_TO_WARN, PRECEDING_DAYS_TO_WARN);
+        String body = String.format("Branch %s will be archived soon. Commit to it again to prevent archival.",
+                branch.name());
 
         for (String author : recipients)
-            EMAIL.sendEmail(author, subject, body);
+            EMAIL_PROVIDER.sendEmail(author, subject, body);
     }
 
     @Override
@@ -42,12 +35,12 @@ public class NotificationLogic implements INotificationLogic {
 
         String subject = "Archival of branch " + branch.name();
 
-        String body = String.format("Branch %s has been inactive for %d days. Branch has been archived as tag %s. " +
+        String body = String.format("Branch %s has been archived as tag %s." +
                 "Checkout the tag and recreate the branch to revive it.",
-                branch.name(), DAYS_TO_STALE_BRANCH, tag.name());
+                branch.name(), tag.name());
 
         for (String author : recipients)
-            EMAIL.sendEmail(author, subject, body);
+            EMAIL_PROVIDER.sendEmail(author, subject, body);
     }
 
     @Override
@@ -57,12 +50,12 @@ public class NotificationLogic implements INotificationLogic {
 
         String subject = "Pending deletion of archive tag " + tag.name();
 
-        String body = String.format("Archive tag %s has been inactive for %d days. Tag will be deleted in %d days. " +
+        String body = String.format("Archive tag %s will be deleted in soon. " +
                 "Create a new tag or branch on archive tag or commits will be lost.",
-                tag.name(), DAYS_TO_STALE_TAG - PRECEDING_DAYS_TO_WARN, PRECEDING_DAYS_TO_WARN);
+                tag.name());
 
         for (String author : recipients)
-            EMAIL.sendEmail(author, subject, body);
+            EMAIL_PROVIDER.sendEmail(author, subject, body);
     }
 
     @Override
@@ -72,10 +65,10 @@ public class NotificationLogic implements INotificationLogic {
 
         String subject = "Deletion of archive tag " + tag.name();
 
-        String body = String.format("Archive tag %s has been inactive for %d days. Tag has been deleted, " +
-                "commits no longer guaranteed to be accessible", tag.name(), DAYS_TO_STALE_TAG);
+        String body = String.format("Archive tag %s has been deleted, commits no longer guaranteed to be accessible",
+                tag.name());
 
         for (String author : recipients)
-            EMAIL.sendEmail(author, subject, body);
+            EMAIL_PROVIDER.sendEmail(author, subject, body);
     }
 }

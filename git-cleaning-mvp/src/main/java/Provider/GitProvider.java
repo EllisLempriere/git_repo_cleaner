@@ -1,6 +1,6 @@
 package Provider;
 
-import Application.ConfigSecrets;
+import Application.Models.ConfigSecrets;
 import Business.Models.*;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;

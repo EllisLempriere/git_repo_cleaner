@@ -17,7 +17,7 @@ import java.util.logging.Level;
 
 public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
-    private final DaysToActions DAYS_TO_ACTIONS;
+    private final TakeActionCountsDays DAYS_TO_ACTIONS;
     private final IGitProvider GIT;
     private final INotificationLogic NOTIFICATIONS;
     private final ICustomLogger LOGGER;
@@ -26,9 +26,9 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
     private static final int executionTime = 1685682000;
 
 
-    public GitRepoCleanerLogic(DaysToActions daysToActions, IGitProvider git,
+    public GitRepoCleanerLogic(TakeActionCountsDays takeActionCountsDays, IGitProvider git,
                                INotificationLogic notification, ICustomLogger logger) {
-        this.DAYS_TO_ACTIONS = daysToActions;
+        this.DAYS_TO_ACTIONS = takeActionCountsDays;
         this.GIT = git;
         this.NOTIFICATIONS = notification;
         this.LOGGER = logger;
@@ -179,14 +179,14 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
             int commitTime = branch.commits().get(0).commitTime();
             int daysSinceCommit = (executionTime - commitTime) / 86400;
 
-            if (daysSinceCommit == DAYS_TO_ACTIONS.daysToStaleBranch() - DAYS_TO_ACTIONS.precedingDaysToWarn()) {
+            if (daysSinceCommit == DAYS_TO_ACTIONS.staleBranchInactivityDays() - DAYS_TO_ACTIONS.notificationBeforeActionDays()) {
                 LOGGER.log(Level.INFO,
                         String.format("Has been %d days since last commit to branch %s. " +
                         "Notifying developer of pending archival", daysSinceCommit, branch.name()));
 
                 notifyPendingArchival(branch);
 
-            } else if (daysSinceCommit >= DAYS_TO_ACTIONS.daysToStaleBranch()) {
+            } else if (daysSinceCommit >= DAYS_TO_ACTIONS.staleBranchInactivityDays()) {
                 LOGGER.log(Level.INFO,
                         String.format("Has been %d days since last commit to branch %s. " +
                         "Archiving branch", daysSinceCommit, branch.name()));
@@ -280,15 +280,15 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
             int commitTime = tag.commit().commitTime();
             int daysSinceCommit = (executionTime - commitTime) / 86400;
 
-            if (daysSinceCommit == DAYS_TO_ACTIONS.daysToStaleBranch() + DAYS_TO_ACTIONS.daysToStaleTag()
-                    - DAYS_TO_ACTIONS.precedingDaysToWarn()) {
+            if (daysSinceCommit == DAYS_TO_ACTIONS.staleBranchInactivityDays() + DAYS_TO_ACTIONS.staleTagDays()
+                    - DAYS_TO_ACTIONS.notificationBeforeActionDays()) {
                 LOGGER.log(Level.INFO,
                         String.format("Has been %d days since last commit on tag %s. " +
                         "Notifying developer of pending deletion", daysSinceCommit, tag.name()));
 
                 notifyPendingTagDeletion(tag);
 
-            } else if (daysSinceCommit >= DAYS_TO_ACTIONS.daysToStaleBranch() + DAYS_TO_ACTIONS.daysToStaleTag()) {
+            } else if (daysSinceCommit >= DAYS_TO_ACTIONS.staleBranchInactivityDays() + DAYS_TO_ACTIONS.staleTagDays()) {
                 LOGGER.log(Level.INFO,
                         String.format("Has been %d days since last commit to tag %s. " +
                         "Removing archive tag", daysSinceCommit, tag.name()));

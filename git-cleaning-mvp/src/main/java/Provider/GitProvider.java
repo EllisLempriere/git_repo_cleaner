@@ -27,17 +27,26 @@ public class GitProvider implements IGitProvider {
     private final int RETRIES;
     private Repository repo;
     private Git git;
-    private boolean initialized;
 
-    public GitProvider(ConfigSecrets user, int retries) {
-        this.CREDENTIALS = new UsernamePasswordCredentialsProvider(user.USERNAME, user.PASSWORD);
+    public GitProvider(ConfigSecrets secrets, int retries) {
+        if (secrets == null)
+            throw new IllegalArgumentException("User secrets cannot be null");
+        if (secrets.USERNAME == null || secrets.PASSWORD == null)
+            throw new IllegalArgumentException("Contents of secrets cannot be null");
+        if (retries < 0)
+            throw new IllegalArgumentException("retries must be >= 0");
+
+        this.CREDENTIALS = new UsernamePasswordCredentialsProvider(secrets.USERNAME, secrets.PASSWORD);
         this.RETRIES = retries;
-        this.initialized = false;
     }
 
 
-    private void initialize(String repoDir) throws GitStartupException {
-        String repoDirectory = repoDir + ".git";
+    @Override
+    public void setupRepo(String repoDir) throws GitStartupException {
+        if (repoDir == null)
+            throw new IllegalArgumentException("Repo directory cannot be null");
+
+        String repoDirectory = repoDir + "\\.git";
 
         int count = 0;
         while (true) {
@@ -46,31 +55,32 @@ public class GitProvider implements IGitProvider {
                     .setGitDir(new File(repoDirectory))
                     .readEnvironment()
                     .findGitDir()
+                    .setMustExist(true)
                     .build();
-                Git git = new Git(repo)) {
+                 Git git = new Git(repo)) {
 
                 this.repo = repo;
                 this.git = git;
-                this.initialized = true;
 
                 return;
 
             } catch (IOException e) {
-                if (++count == RETRIES) {
+                if (++count >= RETRIES) {
                     throw new GitStartupException(
-                            String.format("Failed to start up git due to '%s'", e.getMessage()), e);
+                            String.format("Failed to start up git due to: '%s'", e.getMessage()), e);
                 }
             }
         }
     }
 
     @Override
-    public void setupRepo(String repoDir, String remoteUri) {
-
-    }
-
-    @Override
     public void cloneRepo(String repoDir, String remoteUri) throws GitCloningException {
+        // TODO - Should repoDir have requirements on it for filepath?
+        if (repoDir == null)
+            throw new IllegalArgumentException("Repo directory cannot be null");
+        if (remoteUri == null)
+            throw new IllegalArgumentException("Remote uri cannot be null");
+
         int count = 0;
         while (true) {
             try (Git ignored = Git.cloneRepository()
@@ -81,29 +91,21 @@ public class GitProvider implements IGitProvider {
                     .setCredentialsProvider(CREDENTIALS)
                     .call()) {
 
-                initialize(repoDir);
-
                 return;
 
             } catch (GitAPIException e) {
                 if (++count == RETRIES) {
                     throw new GitCloningException(
-                            String.format("Failed to clone repo after %d attempts due to %s", RETRIES, e.getMessage()),
+                            String.format("Failed to clone repo after %d attempts due to: '%s'", RETRIES, e.getMessage()),
                             e);
                 }
-            } catch (GitStartupException e) {
-                // TODO - Handle
-                throw new RuntimeException(e);
             }
         }
     }
 
     // TODO - Account for empty repo
     @Override
-    public void updateRepo(String repoDir) throws GitUpdateException, GitStartupException {
-        if (!initialized)
-            initialize(repoDir);
-
+    public void updateRepo(String repoDir) throws GitUpdateException {
         int count = 0;
         while (true) {
             try {
@@ -133,17 +135,14 @@ public class GitProvider implements IGitProvider {
             } catch (GitAPIException e) {
                 if (++count == RETRIES) {
                     throw new GitUpdateException(
-                            String.format("Failed to update local repo due to '%s'", e.getMessage()), e);
+                            String.format("Failed to update local repo due to: '%s'", e.getMessage()), e);
                 }
             }
         }
     }
 
     @Override
-    public List<Branch> getBranches() throws GitBranchFetchException, GitStartupException {
-//        if (!initialized)
-//            initialize();
-
+    public List<Branch> getBranches() throws GitBranchFetchException {
         List<Branch> branches = new ArrayList<>();
 
         int count = 0;
@@ -162,17 +161,14 @@ public class GitProvider implements IGitProvider {
             } catch (GitAPIException | IOException e) {
                 if (++count == RETRIES) {
                     throw new GitBranchFetchException(
-                            String.format("Failed to get branch list due to '%s'", e.getMessage()), e);
+                            String.format("Failed to get branch list due to: '%s'", e.getMessage()), e);
                 }
             }
         }
     }
 
     @Override
-    public List<Tag> getTags() throws GitTagFetchException, GitStartupException {
-//        if (!initialized)
-//            initialize();
-
+    public List<Tag> getTags() throws GitTagFetchException {
         List<Tag> tags = new ArrayList<>();
 
         int count = 0;
@@ -182,9 +178,9 @@ public class GitProvider implements IGitProvider {
 
                 for (Ref t : rawTags) {
                     String tagName = getRefName(t);
-                    Commit commit = getTagCommit(t);
+                    List<Commit> commits = getTagCommits(t);
 
-                    tags.add(new Tag(tagName, commit));
+                    tags.add(new Tag(tagName, commits));
                 }
 
                 return tags;
@@ -192,21 +188,18 @@ public class GitProvider implements IGitProvider {
             } catch (GitAPIException | IOException e) {
                 if (++count == RETRIES) {
                     throw new GitTagFetchException(
-                            String.format("Failed to get tag list due to '%s'", e.getMessage()), e);
+                            String.format("Failed to get tag list due to: '%s'", e.getMessage()), e);
                 }
             }
         }
     }
 
     @Override
-    public void createTag(Tag tag) throws GitSetTagException, GitStartupException {
-//        if (!initialized)
-//            initialize();
-
+    public void createTag(Tag tag) throws GitSetTagException {
         int count = 0;
         while (true) {
             try {
-                RevCommit commit = git.log().add(repo.resolve(tag.commit().commitId())).call().iterator().next();
+                RevCommit commit = git.log().add(repo.resolve(tag.commits().get(0).commitId())).call().iterator().next();
                 git.tag().setName(tag.name()).setObjectId(commit).call();
 
                 return;
@@ -214,17 +207,14 @@ public class GitProvider implements IGitProvider {
             } catch (GitAPIException | IOException e) {
                 if (++count == RETRIES) {
                     throw new GitSetTagException(
-                            String.format("Failed to set tag %s because %s", tag.name(), e.getMessage()), e);
+                            String.format("Failed to set tag %s because: '%s'", tag.name(), e.getMessage()), e);
                 }
             }
         }
     }
 
     @Override
-    public void deleteBranch(Branch branch) throws GitBranchDeletionException, GitStartupException {
-//        if (!initialized)
-//            initialize();
-
+    public void deleteBranch(Branch branch) throws GitBranchDeletionException {
         int count = 0;
         while (true) {
             try {
@@ -235,17 +225,14 @@ public class GitProvider implements IGitProvider {
             } catch (GitAPIException e) {
                 if (++count == RETRIES) {
                     throw new GitBranchDeletionException(
-                            String.format("Failed to delete branch %s because %s", branch.name(), e.getMessage()), e);
+                            String.format("Failed to delete branch %s because: '%s'", branch.name(), e.getMessage()), e);
                 }
             }
         }
     }
 
     @Override
-    public void deleteTag(Tag tag) throws GitTagDeletionException, GitStartupException {
-//        if (!initialized)
-//            initialize();
-
+    public void deleteTag(Tag tag) throws GitTagDeletionException {
         int count = 0;
         while (true) {
             try {
@@ -256,17 +243,14 @@ public class GitProvider implements IGitProvider {
             } catch (GitAPIException e) {
                 if (++count == RETRIES) {
                     throw new GitTagDeletionException(
-                            String.format("Failed to delete tag %s because %s", tag.name(), e.getMessage()), e);
+                            String.format("Failed to delete tag %s because: '%s'", tag.name(), e.getMessage()), e);
                 }
             }
         }
     }
 
     @Override
-    public void pushDeleteRemoteBranch(Branch branch) throws GitPushBranchDeletionException, GitStartupException {
-//        if (!initialized)
-//            initialize();
-
+    public void pushDeleteRemoteBranch(Branch branch) throws GitPushBranchDeletionException {
         int count = 0;
         while (true) {
             try {
@@ -285,7 +269,7 @@ public class GitProvider implements IGitProvider {
             } catch (GitAPIException e) {
                 if (++count == RETRIES) {
                     throw new GitPushBranchDeletionException(
-                            String.format("Failed to push deletion of branch %s because %s",
+                            String.format("Failed to push deletion of branch %s because: '%s'",
                             branch.name(), e.getMessage()), e);
                 }
             }
@@ -293,10 +277,7 @@ public class GitProvider implements IGitProvider {
     }
 
     @Override
-    public void pushNewTags() throws GitPushNewTagsException, GitStartupException {
-//        if (!initialized)
-//            initialize();
-
+    public void pushNewTags() throws GitPushNewTagsException {
         int count = 0;
         while (true) {
             try {
@@ -314,7 +295,7 @@ public class GitProvider implements IGitProvider {
             } catch (GitAPIException e) {
                 if (++count == RETRIES) {
                     throw new GitPushNewTagsException(
-                            String.format("Failed to push new tags to remote because %s",
+                            String.format("Failed to push new tags to remote because: '%s'",
                             e.getMessage()), e);
                 }
             }
@@ -322,10 +303,7 @@ public class GitProvider implements IGitProvider {
     }
 
     @Override
-    public void pushDeleteRemoteTag(Tag tag) throws GitPushTagDeletionException, GitStartupException {
-//        if (!initialized)
-//            initialize();
-
+    public void pushDeleteRemoteTag(Tag tag) throws GitPushTagDeletionException {
         int count = 0;
         while (true) {
             try {
@@ -344,7 +322,7 @@ public class GitProvider implements IGitProvider {
             } catch (GitAPIException e) {
                 if (++count == RETRIES) {
                     throw new GitPushTagDeletionException(
-                            String.format("Failed to push deletion of tag %s to remote because %s",
+                            String.format("Failed to push deletion of tag %s to remote because: '%s'",
                             tag.name(), e.getMessage()), e);
                 }
             }
@@ -387,7 +365,9 @@ public class GitProvider implements IGitProvider {
         return commits;
     }
 
-    private Commit getTagCommit(Ref tag) throws IOException, GitAPIException {
+    private List<Commit> getTagCommits(Ref tag) throws IOException, GitAPIException {
+        List<Commit> commits = new ArrayList<>();
+
         LogCommand logCommand = git.log();
 
         Ref peeledRef = repo.getRefDatabase().peel(tag);
@@ -396,9 +376,11 @@ public class GitProvider implements IGitProvider {
         else
             logCommand.add(tag.getObjectId());
 
-        Iterable<RevCommit> tagLog = logCommand.call();
+        Iterable<RevCommit> rawCommits = logCommand.call();
+        for (RevCommit c : rawCommits)
+            commits.add(parseRevCommit(c));
 
-        return parseRevCommit(tagLog.iterator().next());
+        return commits;
     }
 
     private Commit parseRevCommit(RevCommit rawCommit) {

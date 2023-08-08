@@ -1,4 +1,6 @@
 package Business.Models;
 
-public record Tag(String name, Commit commit) {
+import java.util.List;
+
+public record Tag(String name, List<Commit> commits) {
 }

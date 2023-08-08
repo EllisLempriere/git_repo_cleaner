@@ -1,3 +1,5 @@
+package Application;
+
 import Application.Models.ConfigSecrets;
 import Application.Models.ConfigsSetupException;
 import org.junit.jupiter.api.DisplayName;

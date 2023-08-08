@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface IGitProvider {
 
-    void setupRepo(String repoDir, String remoteUri);
+    void setupRepo(String repoDir) throws GitStartupException;
 
     void cloneRepo(String repoDir, String remoteUri) throws GitCloningException;
 

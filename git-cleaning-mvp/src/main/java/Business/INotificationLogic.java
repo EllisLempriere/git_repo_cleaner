@@ -6,11 +6,11 @@ import Business.Models.Tag;
 
 public interface INotificationLogic {
 
-    void sendNotificationPendingArchival(Branch branch) throws SendEmailException;
+    void sendNotificationPendingArchival(Branch branch, String repoId) throws SendEmailException;
 
-    void sendNotificationArchival(Branch branch, Tag tag) throws SendEmailException;
+    void sendNotificationArchival(Branch branch, Tag tag, String repoId) throws SendEmailException;
 
-    void sendNotificationPendingTagDeletion(Tag tag) throws SendEmailException;
+    void sendNotificationPendingTagDeletion(Tag tag, String repoId) throws SendEmailException;
 
-    void sendNotificationTagDeletion(Tag tag) throws SendEmailException;
+    void sendNotificationTagDeletion(Tag tag, String repoId) throws SendEmailException;
 }

@@ -37,6 +37,7 @@ public class ConfigSecrets {
             throw new ConfigsSetupException("Secrets file missing password information");
     }
 
+    // Constructor for testing
     public ConfigSecrets(String username, String password) {
         this.USERNAME = username;
         this.PASSWORD = password;

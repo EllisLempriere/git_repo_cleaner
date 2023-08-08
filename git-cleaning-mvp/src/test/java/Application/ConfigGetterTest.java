@@ -1,4 +1,5 @@
-import Application.ConfigGetter;
+package Application;
+
 import Application.Models.ConfigSecrets;
 import Application.Models.Configs;
 import Application.Models.ConfigsSetupException;
@@ -25,7 +26,7 @@ public class ConfigGetterTest {
     }
 
     @Test
-    @DisplayName("Test with invalid file name")
+    @DisplayName("Test with a file that does not exist")
     void getConfigTest1() {
         try {
             // arrange

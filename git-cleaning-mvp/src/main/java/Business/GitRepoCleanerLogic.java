@@ -7,47 +7,52 @@ import Provider.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
 public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
-    private final TakeActionCountsDays DAYS_TO_ACTIONS;
+    private final List<RepoCleaningInfo> REPOS;
     private final IGitProvider GIT;
-    private final INotificationLogic NOTIFICATIONS;
+    private final INotificationLogic NOTIFICATION_LOGIC;
     private final ICustomLogger LOGGER;
-
-    // Hardcoded for testing. Will pull from current time in final implementation
-    private static final int executionTime = 1685682000;
+    private final int EXECUTION_TIME;
 
 
-    public GitRepoCleanerLogic(TakeActionCountsDays takeActionCountsDays, IGitProvider git,
-                               INotificationLogic notification, ICustomLogger logger) {
-        this.DAYS_TO_ACTIONS = takeActionCountsDays;
+    public GitRepoCleanerLogic(List<RepoCleaningInfo> repoCleaningInfoList, IGitProvider git,
+                               INotificationLogic notificationLogic, ICustomLogger logger, int executionTime) {
+        if (repoCleaningInfoList == null)
+            throw new IllegalArgumentException("Repo cleaning list cannot be null");
+        if (git == null)
+            throw new IllegalArgumentException("Git provider cannot be null");
+        if (notificationLogic == null)
+            throw new IllegalArgumentException("Notification logic cannot be null");
+        if (logger == null)
+            throw new IllegalArgumentException("Logger cannot be null");
+        if (executionTime < 0)
+            throw new IllegalArgumentException("Execution time must be >= 0");
+
+        this.REPOS = repoCleaningInfoList;
         this.GIT = git;
-        this.NOTIFICATIONS = notification;
+        this.NOTIFICATION_LOGIC = notificationLogic;
         this.LOGGER = logger;
+        this.EXECUTION_TIME = executionTime;
     }
 
 
     @Override
-    public void cleanRepos(List<RepoInfo> repos) {
-        for (RepoInfo repo : repos) {
+    public void cleanRepos() {
+        for (RepoCleaningInfo repo : REPOS) {
             LOGGER.log(Level.INFO, "Beginning cleaning repo with remote: " + repo.remoteUri());
 
             try {
                 LOGGER.log(Level.INFO, "Setting up local repo at: " + repo.repoDir());
-                GIT.setupRepo(repo.repoDir(), repo.remoteUri());
                 selectRepo(repo.repoDir(), repo.remoteUri());
                 LOGGER.log(Level.INFO, "Local repo set up");
 
                 LOGGER.log(Level.INFO, "Starting cleaning");
-                cleanRepo(repo.excludedBranches());
+                cleanRepo(repo);
                 LOGGER.log(Level.INFO, "Successfully finished cleaning repo");
 
             } catch (GitCloningException e) {
@@ -63,7 +68,8 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
         }
     }
 
-    private void selectRepo(String repoDir, String remoteUri)
+    @Override
+    public void selectRepo(String repoDir, String remoteUri)
             throws GitCloningException, GitUpdateException, GitStartupException {
         LOGGER.log(Level.INFO, "Checking if local repo exists");
         if (!localRepoExist(repoDir)) {
@@ -75,12 +81,17 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
         } else
             LOGGER.log(Level.INFO, "Local repo exists, continuing");
 
+        LOGGER.log(Level.INFO, "Prepping local repo");
+        GIT.setupRepo(repoDir);
+        LOGGER.log(Level.INFO, "Successfully prepped local repo");
+
         LOGGER.log(Level.INFO, "Updating local repo");
         GIT.updateRepo(repoDir);
         LOGGER.log(Level.INFO, "Repo successfully updated from remote");
     }
 
-    private void cleanRepo(List<String> excludedBranches)
+    @Override
+    public void cleanRepo(RepoCleaningInfo repoCleaningInfo)
             throws GitCloningException, GitUpdateException, GitStartupException {
         try {
             LOGGER.log(Level.INFO, "Getting branch list");
@@ -92,11 +103,12 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
             LOGGER.log(Level.INFO, "Tag list successfully obtained");
 
             LOGGER.log(Level.INFO, "Cleaning branches");
-            List<Branch> deletedBranches = cleanBranches(branches, excludedBranches);
+            List<Branch> deletedBranches = cleanBranches(branches, repoCleaningInfo.repoId(),
+                    repoCleaningInfo.excludedBranches(), repoCleaningInfo.takeActionCountsDays());
             LOGGER.log(Level.INFO, "Finished cleaning branches");
 
             LOGGER.log(Level.INFO, "Cleaning tags");
-            List<Tag> deletedTags = cleanTags(tags);
+            List<Tag> deletedTags = cleanTags(tags, repoCleaningInfo.repoId(), repoCleaningInfo.takeActionCountsDays());
             LOGGER.log(Level.INFO, "Finished cleaning tags");
 
             LOGGER.log(Level.INFO, "Finished cleaning");
@@ -123,7 +135,7 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
             LOGGER.log(Level.INFO, "All changes pushed to remote");
 
-        } catch (GitBranchFetchException e) { // This exception and down, maybe do not stop execution?
+        } catch (GitBranchFetchException e) { // TODO This exception and down, maybe do not stop execution?
             LOGGER.log(Level.SEVERE, e.getMessage());
             LOGGER.log(Level.SEVERE, "Halting execution due to failure to fetch branch list");
         } catch (GitTagFetchException e) {
@@ -143,29 +155,16 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
 
     private static boolean localRepoExist(String repoDirectory) {
-        Path gitFolderPath = Paths.get(repoDirectory + ".git");
+        Path gitFolderPath = Paths.get(repoDirectory + "\\.git");
         Path directoryPath = Paths.get(repoDirectory);
 
         return Files.exists(directoryPath) && Files.exists(gitFolderPath);
     }
 
-    private Tag buildArchiveTag(Branch branch) {
-        StringBuilder tagName = new StringBuilder();
 
-        tagName.append("zArchiveBranch_");
-
-        ZonedDateTime exeTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond(executionTime), ZoneId.systemDefault());
-        String formattedTime = exeTime.format(DateTimeFormatter.BASIC_ISO_DATE).substring(0, 8);
-        tagName.append(formattedTime);
-
-        tagName.append("_");
-        tagName.append(branch.name());
-
-        return new Tag(tagName.toString(), branch.commits().get(0));
-    }
-
-
-    private List<Branch> cleanBranches(List<Branch> branches, List<String> excludedBranches) throws GitStartupException {
+    // Exposed for testing
+    public List<Branch> cleanBranches(List<Branch> branches, String repoId, List<String> excludedBranches,
+                                       TakeActionCountsDays takeActionCountsDays) throws GitStartupException {
         List<Branch> deletedBranches = new ArrayList<>();
 
         for (Branch branch : branches) {
@@ -177,21 +176,22 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
             }
 
             int commitTime = branch.commits().get(0).commitTime();
-            int daysSinceCommit = (executionTime - commitTime) / 86400;
+            int daysSinceCommit = (EXECUTION_TIME - commitTime) / 86400;
 
-            if (daysSinceCommit == DAYS_TO_ACTIONS.staleBranchInactivityDays() - DAYS_TO_ACTIONS.notificationBeforeActionDays()) {
+            if (daysSinceCommit ==
+                    takeActionCountsDays.staleBranchInactivityDays() - takeActionCountsDays.notificationBeforeActionDays()) {
                 LOGGER.log(Level.INFO,
                         String.format("Has been %d days since last commit to branch %s. " +
                         "Notifying developer of pending archival", daysSinceCommit, branch.name()));
 
-                notifyPendingArchival(branch);
+                notifyPendingArchival(branch, repoId);
 
-            } else if (daysSinceCommit >= DAYS_TO_ACTIONS.staleBranchInactivityDays()) {
+            } else if (daysSinceCommit >= takeActionCountsDays.staleBranchInactivityDays()) {
                 LOGGER.log(Level.INFO,
                         String.format("Has been %d days since last commit to branch %s. " +
                         "Archiving branch", daysSinceCommit, branch.name()));
 
-                archiveBranch(branch);
+                archiveBranch(branch, repoId);
                 deletedBranches.add(branch);
 
             } else {
@@ -202,9 +202,9 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
         return deletedBranches;
     }
 
-    private void notifyPendingArchival(Branch branch) {
+    private void notifyPendingArchival(Branch branch, String repoId) {
         try {
-            NOTIFICATIONS.sendNotificationPendingArchival(branch);
+            NOTIFICATION_LOGIC.sendNotificationPendingArchival(branch, repoId);
             LOGGER.log(Level.INFO,
                     String.format("Notified pending archival of branch %s", branch.name()));
 
@@ -215,7 +215,8 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
         }
     }
 
-    private void archiveBranch(Branch branch) throws GitStartupException {
+    // Exposed for testing
+    public void archiveBranch(Branch branch, String repoId) throws GitStartupException {
         Tag newArchiveTag = buildArchiveTag(branch);
 
         try {
@@ -227,7 +228,7 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
             GIT.deleteBranch(branch);
             LOGGER.log(Level.INFO, "Successfully deleted stale branch " + branch.name());
 
-            notifyArchival(branch, newArchiveTag);
+            notifyArchival(branch, newArchiveTag, repoId);
 
             LOGGER.log(Level.INFO,
                     String.format("Stale branch %s successfully archived as %s and notification sent",
@@ -252,9 +253,15 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
         }
     }
 
-    private void notifyArchival(Branch branch, Tag tag) {
+    private Tag buildArchiveTag(Branch branch) {
+        ArchiveTagName archiveTagName = new ArchiveTagName(EXECUTION_TIME, branch.name());
+
+        return new Tag(archiveTagName.name, branch.commits());
+    }
+
+    private void notifyArchival(Branch branch, Tag tag, String repoId) {
         try {
-            NOTIFICATIONS.sendNotificationArchival(branch, tag);
+            NOTIFICATION_LOGIC.sendNotificationArchival(branch, tag, repoId);
             LOGGER.log(Level.INFO,
                     String.format("Notified of archival of branch %s", branch.name()));
 
@@ -266,34 +273,37 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
     }
 
 
-    private List<Tag> cleanTags(List<Tag> tags) throws GitStartupException {
+    // Exposed for testing
+    public List<Tag> cleanTags(List<Tag> tags, String repoId, TakeActionCountsDays takeActionCountsDays)
+            throws GitStartupException {
         List<Tag> deletedTags = new ArrayList<>();
 
         for (Tag tag : tags) {
             LOGGER.log(Level.INFO, "Checking tag " + tag.name());
 
-            if (!tag.name().matches("zArchiveBranch_\\d{8}_[\\w-]+")) {
+            ArchiveTagName archiveTag;
+            if ((archiveTag = ArchiveTagName.tryParse(tag.name())) == null) {
                 LOGGER.log(Level.INFO, "Tag " + tag.name() + " is not an archive tag, skipping");
                 continue;
             }
 
-            int commitTime = tag.commit().commitTime();
-            int daysSinceCommit = (executionTime - commitTime) / 86400;
+            int tagCreationTime = (int) archiveTag.createDate.toInstant().getEpochSecond();
+            int daysSinceCommit = (EXECUTION_TIME - tagCreationTime) / 86400;
 
-            if (daysSinceCommit == DAYS_TO_ACTIONS.staleBranchInactivityDays() + DAYS_TO_ACTIONS.staleTagDays()
-                    - DAYS_TO_ACTIONS.notificationBeforeActionDays()) {
+            if (daysSinceCommit == takeActionCountsDays.staleBranchInactivityDays() + takeActionCountsDays.staleTagDays()
+                    - takeActionCountsDays.notificationBeforeActionDays()) {
                 LOGGER.log(Level.INFO,
                         String.format("Has been %d days since last commit on tag %s. " +
                         "Notifying developer of pending deletion", daysSinceCommit, tag.name()));
 
-                notifyPendingTagDeletion(tag);
+                notifyPendingTagDeletion(tag, repoId);
 
-            } else if (daysSinceCommit >= DAYS_TO_ACTIONS.staleBranchInactivityDays() + DAYS_TO_ACTIONS.staleTagDays()) {
+            } else if (daysSinceCommit >= takeActionCountsDays.staleBranchInactivityDays() + takeActionCountsDays.staleTagDays()) {
                 LOGGER.log(Level.INFO,
                         String.format("Has been %d days since last commit to tag %s. " +
                         "Removing archive tag", daysSinceCommit, tag.name()));
 
-                deleteArchiveTag(tag);
+                deleteArchiveTag(tag, repoId);
                 deletedTags.add(tag);
 
             } else {
@@ -304,9 +314,9 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
         return deletedTags;
     }
 
-    private void notifyPendingTagDeletion(Tag tag) {
+    private void notifyPendingTagDeletion(Tag tag, String repoId) {
         try {
-            NOTIFICATIONS.sendNotificationPendingTagDeletion(tag);
+            NOTIFICATION_LOGIC.sendNotificationPendingTagDeletion(tag, repoId);
             LOGGER.log(Level.INFO,
                     String.format("Notified of pending deletion of archive tag %s", tag.name()));
 
@@ -317,13 +327,14 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
         }
     }
 
-    private void deleteArchiveTag(Tag tag) throws GitStartupException {
+    // Exposed for testing
+    public void deleteArchiveTag(Tag tag, String repoId) throws GitStartupException {
         try {
             LOGGER.log(Level.INFO, "Deleting archive tag " + tag.name());
             GIT.deleteTag(tag);
             LOGGER.log(Level.INFO, "Successfully removed archive tag " + tag.name());
 
-            notifyTagDeletion(tag);
+            notifyTagDeletion(tag, repoId);
 
             LOGGER.log(Level.INFO,
                     String.format("Archive tag %s successfully deleted and notification sent",
@@ -335,9 +346,9 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
         }
     }
 
-    private void notifyTagDeletion(Tag tag) {
+    private void notifyTagDeletion(Tag tag, String repoId) {
         try {
-            NOTIFICATIONS.sendNotificationTagDeletion(tag);
+            NOTIFICATION_LOGIC.sendNotificationTagDeletion(tag, repoId);
             LOGGER.log(Level.INFO,
                     String.format("Notified of deletion of archive tag %s", tag.name()));
 

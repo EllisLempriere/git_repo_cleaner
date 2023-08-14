@@ -195,7 +195,7 @@ public class GitProvider implements IGitProvider {
     }
 
     @Override
-    public void createTag(Tag tag) throws GitSetTagException {
+    public void createTag(Tag tag) throws GitCreateTagException {
         int count = 0;
         while (true) {
             try {
@@ -206,7 +206,7 @@ public class GitProvider implements IGitProvider {
 
             } catch (GitAPIException | IOException e) {
                 if (++count == RETRIES) {
-                    throw new GitSetTagException(
+                    throw new GitCreateTagException(
                             String.format("Failed to set tag %s because: '%s'", tag.name(), e.getMessage()), e);
                 }
             }

@@ -11,6 +11,6 @@ public interface IGitRepoCleanerLogic {
 
     void selectRepo(String repoDir, String remoteUri)
             throws GitCloningException, GitUpdateException, GitStartupException;
-    void cleanRepo(RepoCleaningInfo repoCleaningInfo)
-            throws GitCloningException, GitUpdateException, GitStartupException;
+
+    void cleanRepo(RepoCleaningInfo repoCleaningInfo);
 }

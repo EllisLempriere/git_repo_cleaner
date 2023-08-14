@@ -10,21 +10,21 @@ public interface IGitProvider {
 
     void cloneRepo(String repoDir, String remoteUri) throws GitCloningException;
 
-    void updateRepo(String repoDir) throws GitUpdateException, GitStartupException;
+    void updateRepo(String repoDir) throws GitUpdateException;
 
-    List<Branch> getBranches() throws GitBranchFetchException, GitStartupException;
+    List<Branch> getBranches() throws GitBranchFetchException;
 
-    List<Tag> getTags() throws GitTagFetchException, GitStartupException;
+    List<Tag> getTags() throws GitTagFetchException;
 
-    void createTag(Tag tag) throws GitSetTagException, GitStartupException;
+    void createTag(Tag tag) throws GitCreateTagException;
 
-    void deleteBranch(Branch branch) throws GitBranchDeletionException, GitStartupException;
+    void deleteBranch(Branch branch) throws GitBranchDeletionException;
 
-    void deleteTag(Tag tag) throws GitTagDeletionException, GitStartupException;
+    void deleteTag(Tag tag) throws GitTagDeletionException;
 
-    void pushDeleteRemoteBranch(Branch branch) throws GitPushBranchDeletionException, GitStartupException;
+    void pushDeleteRemoteBranch(Branch branch) throws GitPushBranchDeletionException;
 
-    void pushNewTags() throws GitPushNewTagsException, GitStartupException;
+    void pushNewTags() throws GitPushNewTagsException;
 
-    void pushDeleteRemoteTag(Tag tag) throws GitPushTagDeletionException, GitStartupException;
+    void pushDeleteRemoteTag(Tag tag) throws GitPushTagDeletionException;
 }

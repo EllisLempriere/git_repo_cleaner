@@ -32,9 +32,9 @@ public class NotificationLogic implements INotificationLogic {
         RepoNotificationInfo info = findRepoInfo(repoId);
         List<String> recipients = getRecipientList(branch.commits(), info);
 
-        String subject = "Pending archival of branch " + branch.name();
+        String subject = "Pending archival of branch '" + branch.name() + "'";
 
-        String body = String.format("Branch %s will be archived in %d days. Commit to it again to prevent archival.",
+        String body = String.format("Branch '%s' will be archived in %d days. Commit to it again to prevent archival.",
                 branch.name(), info.takeActionCountsDays().notificationBeforeActionDays());
 
         for (String r : recipients)
@@ -53,9 +53,9 @@ public class NotificationLogic implements INotificationLogic {
         RepoNotificationInfo info = findRepoInfo(repoId);
         List<String> recipients = getRecipientList(branch.commits(), info);
 
-        String subject = "Archival of branch " + branch.name();
+        String subject = "Archival of branch '" + branch.name() + "'";
 
-        String body = String.format("Branch %s has been inactive for %d days. Branch archived as tag %s." +
+        String body = String.format("Branch '%s' has been inactive for %d days. Branch archived as tag '%s'." +
                 "Checkout the tag and recreate the branch to revive it.",
                 branch.name(), info.takeActionCountsDays().staleBranchInactivityDays(), tag.name());
 
@@ -73,9 +73,9 @@ public class NotificationLogic implements INotificationLogic {
         RepoNotificationInfo info = findRepoInfo(repoId);
         List<String> recipients = getRecipientList(tag.commits(), info);
 
-        String subject = "Pending deletion of archive tag " + tag.name();
+        String subject = "Pending deletion of archive tag '" + tag.name() + "'";
 
-        String body = String.format("Archive tag %s will be deleted in %d days. " +
+        String body = String.format("Archive tag '%s' will be deleted in %d days. " +
                 "Create a new tag or branch on archive tag or commits will be lost.",
                 tag.name(), info.takeActionCountsDays().notificationBeforeActionDays());
 
@@ -93,9 +93,9 @@ public class NotificationLogic implements INotificationLogic {
         RepoNotificationInfo info = findRepoInfo(repoId);
         List<String> recipients = getRecipientList(tag.commits(), info);
 
-        String subject = "Deletion of archive tag " + tag.name();
+        String subject = "Deletion of archive tag '" + tag.name() + "'";
 
-        String body = String.format("Archive tag %s is %d days old and has been deleted," +
+        String body = String.format("Archive tag '%s' is %d days old and has been deleted," +
                 "commits no longer guaranteed to be accessible",
                 tag.name(), info.takeActionCountsDays().staleTagDays());
 

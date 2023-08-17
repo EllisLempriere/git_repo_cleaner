@@ -13,10 +13,12 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.CredentialsProvider;
 import org.eclipse.jgit.transport.RefSpec;
+import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -83,7 +85,7 @@ public class GitProvider implements IGitProvider {
 
         int count = 0;
         while (true) {
-            try (Git ignored = Git.cloneRepository()
+            try (Git git = Git.cloneRepository()
                     .setURI(remoteUri)
                     .setRemote("origin")
                     .setDirectory(new File(repoDir))
@@ -91,27 +93,33 @@ public class GitProvider implements IGitProvider {
                     .setCredentialsProvider(CREDENTIALS)
                     .call()) {
 
+                git.close();
+
                 return;
 
             } catch (GitAPIException e) {
-                if (++count == RETRIES) {
+                if (++count >= RETRIES) {
                     throw new GitCloningException(
-                            String.format("Failed to clone repo after %d attempts due to: '%s'", RETRIES, e.getMessage()),
-                            e);
+                            String.format("Failed to clone repo after %d attempts due to: '%s'", RETRIES, e.getMessage()), e);
                 }
+            } catch (JGitInternalException e) {
+                throw new GitCloningException(
+                        String.format("Cannot clone repo to directory '%s' as it already exists with contents", repoDir), e);
             }
         }
     }
 
-    // TODO - Account for empty repo
     @Override
-    public void updateRepo(String repoDir) throws GitUpdateException {
+    public void updateRepo(String repoDir) throws GitUpdateException, GitStartupException {
+        if (git == null)
+            setupRepo(repoDir);
+
         int count = 0;
         while (true) {
             try {
-                // TODO - Bug on retry
-                git.pull()
-                        .setFastForward(MergeCommand.FastForwardMode.FF_ONLY)
+                git.fetch()
+                        .setRemoveDeletedRefs(true)
+                        .setRemote("origin")
                         .setCredentialsProvider(CREDENTIALS)
                         .call();
 
@@ -120,20 +128,50 @@ public class GitProvider implements IGitProvider {
                         .call();
                 List<Ref> localBranches = git.branchList()
                         .call();
+                List<Ref> localOnlyBranches = getLocalOnlyBranches(remoteBranches, localBranches);
+
+                if (remoteBranches.size() == 0 && localBranches.size() == 0)
+                    return;
+
+                for (Ref b : localOnlyBranches) {
+                    if (repo.getBranch().equals(getRefName(b))) {
+                        String trunkBranch = getRefName(remoteBranches.get(remoteBranches.size() - 1));
+                        git.checkout().setName(trunkBranch).call();
+                    }
+
+                    git.branchDelete()
+                            .setBranchNames(b.getName())
+                            .setForce(true)
+                            .call();
+                }
+
+                git.pull()
+                        .setFastForward(MergeCommand.FastForwardMode.FF_ONLY)
+                        .setCredentialsProvider(CREDENTIALS)
+                        .call();
+
+                remoteBranches = git.branchList()
+                        .setListMode(ListBranchCommand.ListMode.REMOTE)
+                        .call();
+                localBranches = git.branchList()
+                        .call();
 
                 List<Ref> remoteOnlyBranches = getRemoteOnlyBranches(remoteBranches, localBranches);
                 for (Ref b : remoteOnlyBranches) {
+                    if (b.getName().substring("refs/remotes/origin/".length()).equals("HEAD"))
+                        continue;
                     git.checkout().setName(b.getName()).call();
                     git.branchCreate().setName(getRefName(b)).call();
                 }
 
                 String trunkBranch = getRefName(remoteBranches.get(remoteBranches.size() - 1));
-                git.checkout().setName(trunkBranch).call();
+                if (!repo.getBranch().equals(trunkBranch))
+                    git.checkout().setName(trunkBranch).call();
 
                 return;
 
-            } catch (GitAPIException e) {
-                if (++count == RETRIES) {
+            } catch (GitAPIException | IOException e) {
+                if (++count >= RETRIES) {
                     throw new GitUpdateException(
                             String.format("Failed to update local repo due to: '%s'", e.getMessage()), e);
                 }
@@ -142,7 +180,10 @@ public class GitProvider implements IGitProvider {
     }
 
     @Override
-    public List<Branch> getBranches() throws GitBranchFetchException {
+    public List<Branch> getBranches() throws GitBranchFetchException, GitNotSetupException {
+        if (git == null)
+            throw new GitNotSetupException("Git not started up, call setupRepo first");
+
         List<Branch> branches = new ArrayList<>();
 
         int count = 0;
@@ -159,7 +200,7 @@ public class GitProvider implements IGitProvider {
                 return branches;
 
             } catch (GitAPIException | IOException e) {
-                if (++count == RETRIES) {
+                if (++count >= RETRIES) {
                     throw new GitBranchFetchException(
                             String.format("Failed to get branch list due to: '%s'", e.getMessage()), e);
                 }
@@ -168,7 +209,10 @@ public class GitProvider implements IGitProvider {
     }
 
     @Override
-    public List<Tag> getTags() throws GitTagFetchException {
+    public List<Tag> getTags() throws GitTagFetchException, GitNotSetupException {
+        if (git == null)
+            throw new GitNotSetupException("Git not started up, call setupRepo first");
+
         List<Tag> tags = new ArrayList<>();
 
         int count = 0;
@@ -186,7 +230,7 @@ public class GitProvider implements IGitProvider {
                 return tags;
 
             } catch (GitAPIException | IOException e) {
-                if (++count == RETRIES) {
+                if (++count >= RETRIES) {
                     throw new GitTagFetchException(
                             String.format("Failed to get tag list due to: '%s'", e.getMessage()), e);
                 }
@@ -196,16 +240,34 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void createTag(Tag tag) throws GitCreateTagException {
+        if (tag == null)
+            throw new IllegalArgumentException("Tag to create cannot be null");
+        if (git == null)
+            throw new GitNotSetupException("Git not started up, call setupRepo first");
+        if (tag.name() == null)
+            throw new IllegalArgumentException("Tag name cannot be null");
+        if (tag.commits() == null || tag.commits().isEmpty())
+            throw new IllegalArgumentException("Tag must have commits with contents");
+
         int count = 0;
         while (true) {
             try {
-                RevCommit commit = git.log().add(repo.resolve(tag.commits().get(0).commitId())).call().iterator().next();
-                git.tag().setName(tag.name()).setObjectId(commit).call();
+                Iterable<RevCommit> rawCommits = git.log().add(repo.resolve(tag.commits().get(0).commitId())).call();
+                ArrayList<RevCommit> commits = new ArrayList<>();
+                rawCommits.forEach(commits::add);
+
+                if (commits.size() != tag.commits().size())
+                    throw new GitCreateTagException("Tag commits must contain full commit history");
+                for (int i = 0; i < commits.size(); i++)
+                    if (!parseRevCommit(commits.get(i)).equals(tag.commits().get(i)))
+                        throw new GitCreateTagException("Tag commits must match correct commit history");
+
+                git.tag().setName(tag.name()).setObjectId(commits.get(0)).call();
 
                 return;
 
-            } catch (GitAPIException | IOException e) {
-                if (++count == RETRIES) {
+            } catch (GitAPIException | IOException | NullPointerException e) {
+                if (++count >= RETRIES) {
                     throw new GitCreateTagException(
                             String.format("Failed to set tag %s because: '%s'", tag.name(), e.getMessage()), e);
                 }
@@ -215,15 +277,25 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void deleteBranch(Branch branch) throws GitBranchDeletionException {
+        if (branch == null)
+            throw new IllegalArgumentException("Cannot delete null branch");
+        if (git == null)
+            throw new GitNotSetupException("Git not started up, call setupRepo first");
+
         int count = 0;
         while (true) {
             try {
+                List<Ref> branches = git.branchList().call();
+                String trunkBranch = getRefName(branches.get(branches.size() - 1));
+                if (repo.getBranch().equals(branch.name()))
+                    git.checkout().setName(trunkBranch).call();
+
                 git.branchDelete().setBranchNames(branch.name()).setForce(true).call();
 
                 return;
 
-            } catch (GitAPIException e) {
-                if (++count == RETRIES) {
+            } catch (GitAPIException | IOException e) {
+                if (++count >= RETRIES) {
                     throw new GitBranchDeletionException(
                             String.format("Failed to delete branch %s because: '%s'", branch.name(), e.getMessage()), e);
                 }
@@ -233,6 +305,11 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void deleteTag(Tag tag) throws GitTagDeletionException {
+        if (tag == null)
+            throw new IllegalArgumentException("Cannot delete null branch");
+        if (git == null)
+            throw new GitNotSetupException("Git not started up, call setupRepo first");
+
         int count = 0;
         while (true) {
             try {
@@ -241,7 +318,7 @@ public class GitProvider implements IGitProvider {
                 return;
 
             } catch (GitAPIException e) {
-                if (++count == RETRIES) {
+                if (++count >= RETRIES) {
                     throw new GitTagDeletionException(
                             String.format("Failed to delete tag %s because: '%s'", tag.name(), e.getMessage()), e);
                 }
@@ -267,7 +344,7 @@ public class GitProvider implements IGitProvider {
                 return;
 
             } catch (GitAPIException e) {
-                if (++count == RETRIES) {
+                if (++count >= RETRIES) {
                     throw new GitPushBranchDeletionException(
                             String.format("Failed to push deletion of branch %s because: '%s'",
                             branch.name(), e.getMessage()), e);
@@ -293,7 +370,7 @@ public class GitProvider implements IGitProvider {
                 return;
 
             } catch (GitAPIException e) {
-                if (++count == RETRIES) {
+                if (++count >= RETRIES) {
                     throw new GitPushNewTagsException(
                             String.format("Failed to push new tags to remote because: '%s'",
                             e.getMessage()), e);
@@ -320,13 +397,71 @@ public class GitProvider implements IGitProvider {
                 return;
 
             } catch (GitAPIException e) {
-                if (++count == RETRIES) {
+                if (++count >= RETRIES) {
                     throw new GitPushTagDeletionException(
                             String.format("Failed to push deletion of tag %s to remote because: '%s'",
                             tag.name(), e.getMessage()), e);
                 }
             }
         }
+    }
+
+    @Override
+    public void addRemote(String remoteUri) {
+        int count = 0;
+        while (true) {
+            try {
+                git.remoteAdd()
+                        .setUri(new URIish(remoteUri))
+                        .setName("origin")
+                        .call();
+
+                return;
+
+            } catch (GitAPIException | URISyntaxException e) {
+                if (++count >= RETRIES)
+                    throw new RuntimeException();
+            }
+        }
+    }
+
+    @Override
+    public void removeRemote(String remoteName) {
+        int count = 0;
+        while (true) {
+            try {
+                git.remoteRemove()
+                        .setRemoteName(remoteName)
+                        .call();
+
+                return;
+
+            } catch (GitAPIException e) {
+                if (++count >= RETRIES)
+                    throw new RuntimeException();
+            }
+        }
+    }
+
+    @Override
+    public void checkoutBranch(String branchName) {
+        int count = 0;
+        while (true) {
+            try {
+                git.checkout().setCreateBranch(false).setName(branchName).call();
+
+                return;
+
+            } catch (GitAPIException e) {
+                if (++count >= RETRIES)
+                    throw new RuntimeException();
+            }
+        }
+    }
+
+    public void shutdownRepo() {
+        if (this.git != null)
+            this.git.getRepository().close();
     }
 
 
@@ -353,6 +488,26 @@ public class GitProvider implements IGitProvider {
         }
 
         return onlyRemoteBranches;
+    }
+
+    private List<Ref> getLocalOnlyBranches(List<Ref> remoteBranches, List<Ref> localBranches) {
+        List<Ref> onlyLocalBranches = new ArrayList<>();
+
+        for (Ref lb : localBranches) {
+            boolean branchOnBoth = false;
+            String localBranchName = getRefName(lb);
+            for (Ref rm : remoteBranches) {
+                String remoteBranchName = getRefName(rm);
+                if (localBranchName.equals(remoteBranchName)) {
+                    branchOnBoth = true;
+                    break;
+                }
+            }
+            if (!branchOnBoth)
+                onlyLocalBranches.add(lb);
+        }
+
+        return onlyLocalBranches;
     }
 
     private List<Commit> getBranchCommitList(String branchName) throws IOException, GitAPIException {

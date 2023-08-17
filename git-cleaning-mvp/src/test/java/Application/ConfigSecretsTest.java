@@ -28,7 +28,7 @@ public class ConfigSecretsTest {
             // act
             ConfigSecrets actual = new ConfigSecrets(
                     "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner\\git-cleaning-mvp" +
-                    "\\src\\test\\resources\\valid-test-secrets.properties");
+                    "\\src\\test\\resources\\Application\\valid-test-secrets.properties");
 
             // assert
             assertEquals(expected, actual);
@@ -55,7 +55,7 @@ public class ConfigSecretsTest {
         // act/assert
         assertThrows(ConfigsSetupException.class, () -> new ConfigSecrets(
                 "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner\\git-cleaning-mvp" +
-                "\\src\\test\\resources\\missing-user-test-secrets.properties"
+                "\\src\\test\\resources\\Application\\missing-user-test-secrets.properties"
         ));
     }
 
@@ -67,7 +67,7 @@ public class ConfigSecretsTest {
         // act/assert
         assertThrows(ConfigsSetupException.class, () -> new ConfigSecrets(
                 "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner\\git-cleaning-mvp" +
-                        "\\src\\test\\resources\\missing-pass-test-secrets.properties"
+                        "\\src\\test\\resources\\Application\\missing-pass-test-secrets.properties"
         ));
     }
 }

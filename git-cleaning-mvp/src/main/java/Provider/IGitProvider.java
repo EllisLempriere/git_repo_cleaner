@@ -10,11 +10,11 @@ public interface IGitProvider {
 
     void cloneRepo(String repoDir, String remoteUri) throws GitCloningException;
 
-    void updateRepo(String repoDir) throws GitUpdateException;
+    void updateRepo(String repoDir) throws GitUpdateException, GitStartupException;
 
-    List<Branch> getBranches() throws GitBranchFetchException;
+    List<Branch> getBranches() throws GitBranchFetchException, GitNotSetupException;
 
-    List<Tag> getTags() throws GitTagFetchException;
+    List<Tag> getTags() throws GitTagFetchException, GitNotSetupException;
 
     void createTag(Tag tag) throws GitCreateTagException;
 
@@ -27,4 +27,10 @@ public interface IGitProvider {
     void pushNewTags() throws GitPushNewTagsException;
 
     void pushDeleteRemoteTag(Tag tag) throws GitPushTagDeletionException;
+
+    void addRemote(String remoteUri);
+
+    void removeRemote(String remoteName);
+
+    void checkoutBranch(String branchName);
 }

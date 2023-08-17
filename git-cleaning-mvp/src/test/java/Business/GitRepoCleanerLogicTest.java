@@ -227,7 +227,7 @@ public class GitRepoCleanerLogicTest {
 
         try {
             doThrow(new GitUpdateException("error")).when(mockGitProvider).updateRepo(anyString());
-        } catch (GitUpdateException ignored) {
+        } catch (GitUpdateException | GitStartupException ignored) {
         }
 
         // act/assert

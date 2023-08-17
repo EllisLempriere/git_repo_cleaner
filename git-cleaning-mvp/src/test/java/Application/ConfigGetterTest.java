@@ -46,7 +46,7 @@ public class ConfigGetterTest {
         try {
             // arrange
             ConfigGetter getter = new ConfigGetter("C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner" +
-                    "\\git-cleaning-mvp\\src\\test\\resources\\valid-test-config.json");
+                    "\\git-cleaning-mvp\\src\\test\\resources\\Application\\valid-test-config.json");
 
             ConfigSecrets expectedSecrets = new ConfigSecrets("user", "pass");
             List<RepoConfig> expectedRepoConfigs = buildTestRepoConfigs();
@@ -69,7 +69,7 @@ public class ConfigGetterTest {
         try {
             // arrange
             ConfigGetter getter = new ConfigGetter("C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner" +
-                    "\\git-cleaning-mvp\\src\\test\\resources\\missing-retries-test-config.json");
+                    "\\git-cleaning-mvp\\src\\test\\resources\\Application\\missing-retries-test-config.json");
 
             // act/assert
             assertThrows(ConfigsSetupException.class, getter::getConfigs);
@@ -85,7 +85,7 @@ public class ConfigGetterTest {
         try {
             // arrange
             ConfigGetter getter = new ConfigGetter("C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner" +
-                    "\\git-cleaning-mvp\\src\\test\\resources\\empty-test-config.json");
+                    "\\git-cleaning-mvp\\src\\test\\resources\\Application\\empty-test-config.json");
 
             // act/assert
             assertThrows(ConfigsSetupException.class, getter::getConfigs);
@@ -101,7 +101,7 @@ public class ConfigGetterTest {
         try {
             // arrange
             ConfigGetter getter = new ConfigGetter("C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner" +
-                    "\\git-cleaning-mvp\\src\\test\\resources\\missing-config-secrets-test-config.json");
+                    "\\git-cleaning-mvp\\src\\test\\resources\\Application\\missing-config-secrets-test-config.json");
 
             // act/assert
             assertThrows(ConfigsSetupException.class, getter::getConfigs);
@@ -117,7 +117,7 @@ public class ConfigGetterTest {
         try {
             // arrange
             ConfigGetter getter = new ConfigGetter("C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner" +
-                    "\\git-cleaning-mvp\\src\\test\\resources\\missing-repos-test-config.json");
+                    "\\git-cleaning-mvp\\src\\test\\resources\\Application\\missing-repos-test-config.json");
 
             // act/assert
             assertThrows(ConfigsSetupException.class, getter::getConfigs);
@@ -133,7 +133,7 @@ public class ConfigGetterTest {
         try {
             // arrange
             ConfigGetter getter = new ConfigGetter("C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner" +
-                    "\\git-cleaning-mvp\\src\\test\\resources\\empty-repos-test-config.json");
+                    "\\git-cleaning-mvp\\src\\test\\resources\\Application\\empty-repos-test-config.json");
 
             // act
             Configs configs = getter.getConfigs();

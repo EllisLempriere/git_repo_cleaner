@@ -13,12 +13,10 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.CredentialsProvider;
 import org.eclipse.jgit.transport.RefSpec;
-import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -414,57 +412,6 @@ public class GitProvider implements IGitProvider {
     public void shutdownRepo() {
         if (this.git != null)
             this.git.getRepository().close();
-    }
-
-
-    public void addRemote(String remoteUri) {
-        int count = 0;
-        while (true) {
-            try {
-                git.remoteAdd()
-                        .setUri(new URIish(remoteUri))
-                        .setName("origin")
-                        .call();
-
-                return;
-
-            } catch (GitAPIException | URISyntaxException e) {
-                if (++count >= RETRIES)
-                    throw new RuntimeException();
-            }
-        }
-    }
-
-    public void removeRemote(String remoteName) {
-        int count = 0;
-        while (true) {
-            try {
-                git.remoteRemove()
-                        .setRemoteName(remoteName)
-                        .call();
-
-                return;
-
-            } catch (GitAPIException e) {
-                if (++count >= RETRIES)
-                    throw new RuntimeException();
-            }
-        }
-    }
-
-    public void checkoutBranch(String branchName) {
-        int count = 0;
-        while (true) {
-            try {
-                git.checkout().setCreateBranch(false).setName(branchName).call();
-
-                return;
-
-            } catch (GitAPIException e) {
-                if (++count >= RETRIES)
-                    throw new RuntimeException();
-            }
-        }
     }
 
 

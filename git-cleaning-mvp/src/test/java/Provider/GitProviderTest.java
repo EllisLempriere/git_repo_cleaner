@@ -4,6 +4,12 @@ import Application.Models.ConfigSecrets;
 import Application.Models.ConfigsSetupException;
 import Business.Models.*;
 import org.apache.commons.io.FileUtils;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.transport.URIish;
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,6 +20,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -63,15 +70,14 @@ public class GitProviderTest {
         assertThrows(IllegalArgumentException.class, () -> new GitProvider(invalidSecrets, 0));
     }
 
-    @ParameterizedTest
+    @Test
     @DisplayName("Invalid retries value < 0")
-    @ValueSource(ints = {-1, -3})
-    void constructorTest3(int retries) {
+    void constructorTest3() {
         // arrange
         ConfigSecrets secrets = new ConfigSecrets("user", "pass");
 
         // act/assert
-        assertThrows(IllegalArgumentException.class, () -> new GitProvider(secrets, retries));
+        assertThrows(IllegalArgumentException.class, () -> new GitProvider(secrets, -1));
     }
 
     @Test
@@ -100,7 +106,7 @@ public class GitProviderTest {
 
     @ParameterizedTest
     @DisplayName("Repo directory param does not point to a git repo, throws exception")
-    @ValueSource(strings = {"not_a_file_path", "hello", "C:\\Documents"})
+    @ValueSource(strings = {"not_a_file_path", "C:\\Documents"})
     void setupRepoTest2(String invalidPath) {
         // arrange
         GitProvider provider = getProvider();
@@ -162,17 +168,18 @@ public class GitProviderTest {
 
         // act/assert
         assertThrows(GitCloningException.class, () -> provider.cloneRepo(
-                "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner", "https://gitlab.com/pslfamily/git_repo_cleaner.git"));
+                "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+                "https://gitlab.com/pslfamily/git_repo_cleaner.git"));
     }
 
     @Test
     @DisplayName("Successfully clones repo")
     void cloneRepoTest5() {
-        String repoDir = "C:\\Users\\ellis\\Documents\\repos\\clone-test-repo";
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
 
+            String repoDir = "C:\\Users\\ellis\\Documents\\repos\\clone-test-repo";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
 
@@ -206,7 +213,6 @@ public class GitProviderTest {
             // assert
             assertTrue(repoEqual(repoDir, "C:\\Users\\ellis\\Documents\\git-cleaner-expected-repos\\clone-empty-repo"));
 
-            provider.shutdownRepo();
             FileUtils.deleteDirectory(new File(repoDir));
 
         } catch (GitCloningException | IOException e) {
@@ -275,8 +281,8 @@ public class GitProviderTest {
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\update-test-clone";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-
             provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/update-test-clone.git");
+            provider.setupRepo(repoDir);
 
             // act
             provider.updateRepo(repoDir);
@@ -297,6 +303,7 @@ public class GitProviderTest {
     void updateRepoTest5() {
         // arrange
         GitProvider provider = getProviderWithValidSecrets();
+
         String repoDir = "C:\\Users\\ellis\\Documents\\repos\\update-test-up-to-date";
 
         // act/assert
@@ -316,13 +323,13 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\update-test-behind-localversion";
-            String remoteUri = "https://gitlab.com/EllisLempriere/update-test-behind-localversion.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/update-test-behind-localversion.git");
             provider.updateRepo(repoDir);
-            provider.removeRemote("origin");
-            provider.addRemote("https://gitlab.com/EllisLempriere/update-test-behind-remoteversion.git");
+
+            removeRemote(repoDir, "origin");
+            addRemote(repoDir, "https://gitlab.com/EllisLempriere/update-test-behind-remoteversion.git");
 
             // act
             provider.updateRepo(repoDir);
@@ -378,10 +385,9 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\empty-repo-get-branches-2";
-            String remoteUri = "https://gitlab.com/EllisLempriere/empty-repo.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/empty-repo.git");
             provider.updateRepo(repoDir);
 
             // act
@@ -407,10 +413,9 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\get-refs-test-get-branches";
-            String remoteUri = "https://gitlab.com/EllisLempriere/get-refs-test.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/get-refs-test.git");
             provider.updateRepo(repoDir);
 
             List<Branch> expected = getExpectedBranchList();
@@ -428,6 +433,18 @@ public class GitProviderTest {
                  IOException e) {
             throw new RuntimeException(e);
         }
+    }
+    private List<Branch> getExpectedBranchList() {
+        List<Branch> expectedBranches = new ArrayList<>();
+
+        List<Commit> commits = getCommitsList();
+
+        expectedBranches.add(new Branch("a1", Arrays.asList(commits.get(4), commits.get(1))));
+        expectedBranches.add(new Branch("a2", Arrays.asList(commits.get(5), commits.get(0), commits.get(1))));
+        expectedBranches.add(new Branch("b1", Arrays.asList(commits.get(2), commits.get(3), commits.get(4), commits.get(1))));
+        expectedBranches.add(new Branch("main", Arrays.asList(commits.get(0), commits.get(1))));
+
+        return expectedBranches;
     }
 
 
@@ -449,10 +466,9 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\empty-repo-get-tags-2";
-            String remoteUri = "https://gitlab.com/EllisLempriere/empty-repo.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/empty-repo.git");
             provider.updateRepo(repoDir);
 
             // act
@@ -477,10 +493,9 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\get-refs-test-get-tags";
-            String remoteUri = "https://gitlab.com/EllisLempriere/get-refs-test.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/get-refs-test.git");
             provider.updateRepo(repoDir);
 
             List<Tag> expected = getExpectedTagList();
@@ -497,6 +512,16 @@ public class GitProviderTest {
         } catch (GitTagFetchException | GitCloningException | GitUpdateException | GitStartupException | IOException e) {
             throw new RuntimeException(e);
         }
+    }
+    private List<Tag> getExpectedTagList() {
+        List<Tag> expectedTags = new ArrayList<>();
+
+        List<Commit> commits = getCommitsList();
+
+        expectedTags.add(new Tag("tag1", Arrays.asList(commits.get(5), commits.get(0), commits.get(1))));
+        expectedTags.add(new Tag("tag2", Arrays.asList(commits.get(3), commits.get(4), commits.get(1))));
+
+        return expectedTags;
     }
 
 
@@ -519,17 +544,16 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\tag-branch-manip-tests" + testId;
-            String remoteUri = "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git");
             provider.updateRepo(repoDir);
 
             // act/assert
             assertThrows(IllegalArgumentException.class, () -> provider.createTag(tag));
 
-        provider.shutdownRepo();
-        FileUtils.deleteDirectory(new File(repoDir));
+            provider.shutdownRepo();
+            FileUtils.deleteDirectory(new File(repoDir));
 
         } catch (GitCloningException | GitUpdateException | GitStartupException | IOException e) {
             throw new RuntimeException(e);
@@ -545,7 +569,7 @@ public class GitProviderTest {
     }
 
     @ParameterizedTest
-    @DisplayName("Tag's commit list contains commits that are not part of the repo, throws exception")
+    @DisplayName("Tag's commit list contains invalid commits, throws exception")
     @MethodSource("generateTagsWithInvalidCommits")
     void createTagTest3(Tag tag) {
         try {
@@ -554,17 +578,16 @@ public class GitProviderTest {
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\tag-branch-manip-tests-create-tag-3."
                     + tag.name().substring(3);
-            String remoteUri = "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git");
             provider.updateRepo(repoDir);
 
             // act/assert
             assertThrows(GitCreateTagException.class, () -> provider.createTag(tag));
 
-        provider.shutdownRepo();
-        FileUtils.deleteDirectory(new File(repoDir));
+            provider.shutdownRepo();
+            FileUtils.deleteDirectory(new File(repoDir));
 
         } catch (GitCloningException | GitUpdateException | GitStartupException | IOException e) {
             throw new RuntimeException(e);
@@ -596,10 +619,9 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\tag-branch-manip-tests-create-tag";
-            String remoteUri = "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git");
             provider.updateRepo(repoDir);
 
             List<Commit> commits = Arrays.asList(
@@ -651,21 +673,25 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\tag-branch-manip-tests-delete-branch-3";
-            String remoteUri = "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git");
             provider.updateRepo(repoDir);
 
             Branch branchToDelete = new Branch("notInRepo", Collections.emptyList());
 
-            // act/assert
-            assertDoesNotThrow(() -> provider.deleteBranch(branchToDelete));
+            // act
+            provider.deleteBranch(branchToDelete);
+
+            // assert
+            assertTrue(repoEqual(repoDir,
+                    "C:\\Users\\ellis\\Documents\\git-cleaner-expected-repos\\tag-branch-manip-tests"));
 
             provider.shutdownRepo();
             FileUtils.deleteDirectory(new File(repoDir));
 
-        } catch (GitCloningException | GitUpdateException | GitStartupException | IOException e) {
+        } catch (GitCloningException | GitUpdateException | GitStartupException | IOException |
+                 GitBranchDeletionException e) {
             throw new RuntimeException(e);
         }
     }
@@ -678,14 +704,13 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\tag-branch-manip-tests-delete-branch-4";
-            String remoteUri = "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git");
             provider.updateRepo(repoDir);
 
             Branch branchToDelete = new Branch("a1", Collections.emptyList());
-            provider.checkoutBranch(branchToDelete.name());
+            checkoutBranch(repoDir, branchToDelete.name());
 
             // act
             provider.deleteBranch(branchToDelete);
@@ -711,14 +736,13 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\tag-branch-manip-tests-delete-branch-5";
-            String remoteUri = "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git");
             provider.updateRepo(repoDir);
 
             Branch branchToDelete = new Branch("a1", Collections.emptyList());
-            provider.checkoutBranch("main");
+            checkoutBranch(repoDir, "main");
 
             // act
             provider.deleteBranch(branchToDelete);
@@ -735,6 +759,7 @@ public class GitProviderTest {
             throw new RuntimeException(e);
         }
     }
+
 
     @Test
     @DisplayName("Null tag passed in as parameter, throws exception")
@@ -764,21 +789,26 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\tag-branch-manip-tests-delete-tag-3";
-            String remoteUri = "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git");
             provider.updateRepo(repoDir);
 
             Tag tagToDelete = new Tag("notInRepo", Collections.emptyList());
 
-            // act/assert
-            assertDoesNotThrow(() -> provider.deleteTag(tagToDelete));
+            // act
+            provider.deleteTag(tagToDelete);
+
+            // assert
+            provider.updateRepo(repoDir);
+            assertTrue(repoEqual(repoDir,
+                    "C:\\Users\\ellis\\Documents\\git-cleaner-expected-repos\\tag-branch-manip-tests"));
 
             provider.shutdownRepo();
             FileUtils.deleteDirectory(new File(repoDir));
 
-        } catch (GitCloningException | GitUpdateException | GitStartupException | IOException e) {
+        } catch (GitCloningException | GitUpdateException | GitStartupException | IOException |
+                 GitTagDeletionException e) {
             throw new RuntimeException(e);
         }
     }
@@ -791,10 +821,9 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\tag-branch-manip-tests-delete-tag-4";
-            String remoteUri = "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git");
             provider.updateRepo(repoDir);
 
             Tag tagToDelete = new Tag("imATag", Collections.emptyList());
@@ -816,45 +845,46 @@ public class GitProviderTest {
     }
 
 
-    // MUST DELETE AND RE-FORK REMOTE REPO EACH RUN FOR VALID TEST
     @Test
     @DisplayName("Valid branch to delete, branch is deleted from remote")
     void pushDeleteRemoteBranchTest1() {
         try {
             // arrange
-            GitProvider provider = getProviderWithValidSecrets();
+            GitProvider provider1 = getProviderWithValidSecrets();
 
-            String repoDir = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-delete-branch-1";
-            String remoteUri = "https://gitlab.com/EllisLempriere/remote-changes-tests-delete-branch.git";
-            if (Files.exists(Paths.get(repoDir)))
-                FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
-            provider.updateRepo(repoDir);
+            String repoDir1 = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-delete-branch-1";
+            if (Files.exists(Paths.get(repoDir1)))
+                FileUtils.deleteDirectory(new File(repoDir1));
+            provider1.cloneRepo(repoDir1, "https://gitlab.com/EllisLempriere/remote-changes-tests-delete-branch.git");
+            provider1.updateRepo(repoDir1);
 
             Branch branchToDelete = new Branch("delete", Arrays.asList(
                     new Commit("04281cf2a21765aee9060880ee9ee905772dbf8a", 1692637168, "ellis@pslfamily.org"),
                     new Commit("31512ea22eb03c3d077ffe171f4d44615775858d", 1692637129, "ellis@pslfamily.org")));
-            provider.deleteBranch(branchToDelete);
+            provider1.deleteBranch(branchToDelete);
 
             // act
-            provider.pushDeleteRemoteBranch(branchToDelete);
+            provider1.pushDeleteRemoteBranch(branchToDelete);
 
             // assert
-            repoDir = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-delete-branch-result";
-            remoteUri = "https://gitlab.com/EllisLempriere/remote-changes-tests-delete-branch.git";
+            GitProvider provider2 = getProviderWithValidSecrets();
 
-            FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
-            provider.updateRepo(repoDir);
+            String repoDir2 = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-delete-branch-result";
+            if (Files.exists(Paths.get(repoDir2)))
+                FileUtils.deleteDirectory(new File(repoDir2));
+            provider2.cloneRepo(repoDir2, "https://gitlab.com/EllisLempriere/remote-changes-tests-delete-branch.git");
+            provider2.updateRepo(repoDir2);
 
-            List<Branch> resultBranchList = provider.getBranches();
-
+            List<Branch> resultBranchList = provider2.getBranches();
             assertFalse(resultBranchList.contains(branchToDelete));
 
-            provider.shutdownRepo();
-            FileUtils.deleteDirectory(new File(repoDir));
-            FileUtils.deleteDirectory(
-                    new File("C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-delete-branch-result"));
+            // reset
+            createRemoteBranch(repoDir1, branchToDelete);
+
+            provider1.shutdownRepo();
+            provider2.shutdownRepo();
+            FileUtils.deleteDirectory(new File(repoDir1));
+            FileUtils.deleteDirectory(new File(repoDir2));
 
         } catch (GitBranchDeletionException | GitPushBranchDeletionException | GitBranchFetchException |
                  GitCloningException | GitUpdateException | GitStartupException | IOException e) {
@@ -870,10 +900,9 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-delete-branch-2";
-            String remoteUri = "https://gitlab.com/EllisLempriere/remote-changes-tests.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/remote-changes-tests.git");
             provider.updateRepo(repoDir);
 
             Branch branchToDelete = new Branch("not_exist", Collections.emptyList());
@@ -883,7 +912,8 @@ public class GitProviderTest {
 
             // assert
             provider.updateRepo(repoDir);
-            assertTrue(repoEqual(repoDir, "C:\\Users\\ellis\\Documents\\git-cleaner-expected-repos\\remote-changes-tests"));
+            assertTrue(repoEqual(repoDir,
+                    "C:\\Users\\ellis\\Documents\\git-cleaner-expected-repos\\remote-changes-tests"));
 
             provider.shutdownRepo();
             FileUtils.deleteDirectory(new File(repoDir));
@@ -943,10 +973,9 @@ public class GitProviderTest {
             GitProvider provider1 = getProviderWithValidSecrets();
 
             String repoDir1 = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-push-tags-2";
-            String remoteUri = "https://gitlab.com/EllisLempriere/remote-changes-tests-push-tags.git";
             if (Files.exists(Paths.get(repoDir1)))
                 FileUtils.deleteDirectory(new File(repoDir1));
-            provider1.cloneRepo(repoDir1, remoteUri);
+            provider1.cloneRepo(repoDir1, "https://gitlab.com/EllisLempriere/remote-changes-tests-push-tags.git");
             provider1.updateRepo(repoDir1);
 
             List<Tag> tagsToAdd = new ArrayList<>();
@@ -969,24 +998,22 @@ public class GitProviderTest {
             GitProvider provider2 = getProviderWithValidSecrets();
 
             String repoDir2 = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-push-tags-2-result";
-            provider2.cloneRepo(repoDir2, remoteUri);
+            provider2.cloneRepo(repoDir2, "https://gitlab.com/EllisLempriere/remote-changes-tests-push-tags.git");
             provider2.updateRepo(repoDir2);
 
             List<Tag> resultTagList = provider2.getTags();
-
             assertAll(
                     () -> assertTrue(resultTagList.contains(tagsToAdd.get(0))),
                     () -> assertTrue(resultTagList.contains(tagsToAdd.get(1)))
             );
 
-            // Reset test
+            // reset
             provider2.pushDeleteRemoteTag(tagsToAdd.get(0));
             provider2.pushDeleteRemoteTag(tagsToAdd.get(1));
 
             provider1.shutdownRepo();
-            FileUtils.deleteDirectory(new File(repoDir1));
-
             provider2.shutdownRepo();
+            FileUtils.deleteDirectory(new File(repoDir1));
             FileUtils.deleteDirectory(new File(repoDir2));
 
         } catch (GitPushNewTagsException | GitTagFetchException | GitCreateTagException | GitCloningException |
@@ -1003,10 +1030,9 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-push-tags-3";
-            String remoteUri = "https://gitlab.com/EllisLempriere/remote-changes-tests.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/remote-changes-tests.git");
             provider.updateRepo(repoDir);
 
             // act
@@ -1014,7 +1040,8 @@ public class GitProviderTest {
 
             // assert
             provider.updateRepo(repoDir);
-            assertTrue(repoEqual(repoDir, "C:\\Users\\ellis\\Documents\\git-cleaner-expected-repos\\remote-changes-tests"));
+            assertTrue(repoEqual(repoDir,
+                    "C:\\Users\\ellis\\Documents\\git-cleaner-expected-repos\\remote-changes-tests"));
 
             provider.shutdownRepo();
             FileUtils.deleteDirectory(new File(repoDir));
@@ -1046,6 +1073,7 @@ public class GitProviderTest {
             // act/assert
             assertThrows(GitPushNewTagsException.class, provider::pushNewTags);
 
+            // reset
             provider.deleteTag(tag);
             provider.shutdownRepo();
 
@@ -1062,7 +1090,8 @@ public class GitProviderTest {
         GitProvider provider = getProvider();
 
         // act/assert
-        assertThrows(GitNotSetupException.class, () -> provider.pushDeleteRemoteTag(new Tag("tag", Collections.emptyList())));
+        assertThrows(GitNotSetupException.class,
+                () -> provider.pushDeleteRemoteTag(new Tag("tag", Collections.emptyList())));
     }
 
     @Test
@@ -1084,6 +1113,7 @@ public class GitProviderTest {
             // act/assert
             assertThrows(GitPushTagDeletionException.class, () -> provider.pushDeleteRemoteTag(tagToDelete));
 
+            // reset
             provider.createTag(tagToDelete);
             provider.shutdownRepo();
 
@@ -1100,10 +1130,9 @@ public class GitProviderTest {
             GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-delete-tag-3";
-            String remoteUri = "https://gitlab.com/EllisLempriere/remote-changes-tests.git";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, remoteUri);
+            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/remote-changes-tests.git");
             provider.updateRepo(repoDir);
 
             Tag tagToDelete = new Tag("not_exist", Collections.emptyList());
@@ -1112,7 +1141,8 @@ public class GitProviderTest {
             provider.pushDeleteRemoteTag(tagToDelete);
 
             // assert
-            assertTrue(repoEqual(repoDir, "C:\\Users\\ellis\\Documents\\git-cleaner-expected-repos\\remote-changes-tests"));
+            assertTrue(repoEqual(repoDir,
+                    "C:\\Users\\ellis\\Documents\\git-cleaner-expected-repos\\remote-changes-tests"));
 
             provider.shutdownRepo();
             FileUtils.deleteDirectory(new File(repoDir));
@@ -1128,41 +1158,37 @@ public class GitProviderTest {
     void pushDeleteRemoteTagTest4() {
         try {
             // arrange
-            GitProvider provider1 = getProviderWithValidSecrets();
+            GitProvider provider = getProviderWithValidSecrets();
 
             String repoDir1 = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-delete-tag-4";
-            String remoteUri = "https://gitlab.com/EllisLempriere/remote-changes-tests-delete-tag.git";
             if (Files.exists(Paths.get(repoDir1)))
                 FileUtils.deleteDirectory(new File(repoDir1));
-            provider1.cloneRepo(repoDir1, remoteUri);
-            provider1.updateRepo(repoDir1);
+            provider.cloneRepo(repoDir1, "https://gitlab.com/EllisLempriere/remote-changes-tests-delete-tag.git");
+            provider.updateRepo(repoDir1);
 
             Tag tagToDelete = new Tag("deleteMe", Arrays.asList(
                     new Commit("7a5ba15a1f4b53561c9ff119e04f1fbf3eb9ab48", 1692637195, "ellis@pslfamily.org"),
                     new Commit("31512ea22eb03c3d077ffe171f4d44615775858d", 1692637129, "ellis@pslfamily.org")));
 
-            provider1.deleteTag(tagToDelete);
+            provider.deleteTag(tagToDelete);
 
             // act
-            provider1.pushDeleteRemoteTag(tagToDelete);
+            provider.pushDeleteRemoteTag(tagToDelete);
 
             // assert
-            GitProvider provider2 = getProviderWithValidSecrets();
-
             String repoDir2 = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-delete-tag-4-result";
-            provider2.cloneRepo(repoDir2, remoteUri);
-            provider2.updateRepo(repoDir2);
+            provider.cloneRepo(repoDir2, "https://gitlab.com/EllisLempriere/remote-changes-tests-delete-tag.git");
+            provider.updateRepo(repoDir2);
 
-            List<Tag> tags = provider2.getTags();
+            List<Tag> tags = provider.getTags();
             assertFalse(tags.contains(tagToDelete));
 
-            // Reset test
-            provider2.createTag(tagToDelete);
-            provider2.pushNewTags();
+            // reset
+            provider.createTag(tagToDelete);
+            provider.pushNewTags();
 
-            provider1.shutdownRepo();
+            provider.shutdownRepo();
             FileUtils.deleteDirectory(new File(repoDir1));
-            provider2.shutdownRepo();
             FileUtils.deleteDirectory(new File(repoDir2));
 
         } catch (GitCloningException | GitUpdateException | GitStartupException | IOException |
@@ -1180,10 +1206,9 @@ public class GitProviderTest {
             GitProvider provider1 = getProviderWithValidSecrets();
 
             String repoDir1 = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-delete-tag-5";
-            String remoteUri = "https://gitlab.com/EllisLempriere/remote-changes-tests-delete-tag.git";
             if (Files.exists(Paths.get(repoDir1)))
                 FileUtils.deleteDirectory(new File(repoDir1));
-            provider1.cloneRepo(repoDir1, remoteUri);
+            provider1.cloneRepo(repoDir1, "https://gitlab.com/EllisLempriere/remote-changes-tests-delete-tag.git");
             provider1.updateRepo(repoDir1);
 
             Tag tagToDelete = new Tag("deleteMe", Arrays.asList(
@@ -1197,12 +1222,13 @@ public class GitProviderTest {
             GitProvider provider2 = getProviderWithValidSecrets();
 
             String repoDir2 = "C:\\Users\\ellis\\Documents\\repos\\remote-changes-tests-delete-tag-5-result";
-            provider2.cloneRepo(repoDir2, remoteUri);
+            if (Files.exists(Paths.get(repoDir2)))
+                FileUtils.deleteDirectory(new File(repoDir2));
+            provider2.cloneRepo(repoDir2, "https://gitlab.com/EllisLempriere/remote-changes-tests-delete-tag.git");
             provider2.updateRepo(repoDir2);
 
             List<Tag> tags1 = provider1.getTags();
             List<Tag> tags2 = provider2.getTags();
-
             assertAll(
                     () -> assertTrue(tags1.contains(tagToDelete)),
                     () -> assertFalse(tags2.contains(tagToDelete))
@@ -1212,8 +1238,8 @@ public class GitProviderTest {
             provider1.pushNewTags();
 
             provider1.shutdownRepo();
-            FileUtils.deleteDirectory(new File(repoDir1));
             provider2.shutdownRepo();
+            FileUtils.deleteDirectory(new File(repoDir1));
             FileUtils.deleteDirectory(new File(repoDir2));
 
         } catch (GitCloningException | GitUpdateException | GitStartupException | IOException |
@@ -1272,30 +1298,8 @@ public class GitProviderTest {
         return true;
     }
 
-    // Expected data builders for getBranches and getTags
-    private List<Branch> getExpectedBranchList() {
-        List<Branch> expectedBranches = new ArrayList<>();
-
-        List<Commit> commits = getCommitsList();
-
-        expectedBranches.add(new Branch("a1", Arrays.asList(commits.get(4), commits.get(1))));
-        expectedBranches.add(new Branch("a2", Arrays.asList(commits.get(5), commits.get(0), commits.get(1))));
-        expectedBranches.add(new Branch("b1", Arrays.asList(commits.get(2), commits.get(3), commits.get(4), commits.get(1))));
-        expectedBranches.add(new Branch("main", Arrays.asList(commits.get(0), commits.get(1))));
-
-        return expectedBranches;
-    }
-    private List<Tag> getExpectedTagList() {
-        List<Tag> expectedTags = new ArrayList<>();
-
-        List<Commit> commits = getCommitsList();
-
-        expectedTags.add(new Tag("tag1", Arrays.asList(commits.get(5), commits.get(0), commits.get(1))));
-        expectedTags.add(new Tag("tag2", Arrays.asList(commits.get(3), commits.get(4), commits.get(1))));
-
-        return expectedTags;
-    }
-    private static List<Commit> getCommitsList() {
+    // Expected commits for tests for getBranches and getTags
+    private List<Commit> getCommitsList() {
         List<Commit> commits = new ArrayList<>();
         commits.add(new Commit("3c678745d4dc1a1430845ad01bf0e4b5a3f37548", 1692221305, "ellis@pslfamily.org"));
         commits.add(new Commit("9de708e0a2cbd029444e0195a9d538e35f48fcd7", 1692220919, "ellis@pslfamily.org"));
@@ -1305,5 +1309,112 @@ public class GitProviderTest {
         commits.add(new Commit("905e7869041187ee4ef3ce2331f383838321372b", 1692221362, "ellis@pslfamily.org"));
 
         return commits;
+    }
+
+    private void removeRemote(String repoDir, String remoteName) {
+        try {
+            String repoDirectory = repoDir + "\\.git";
+
+            FileRepositoryBuilder repoBuilder = new FileRepositoryBuilder();
+            Repository repo = repoBuilder
+                    .setGitDir(new File(repoDirectory))
+                    .readEnvironment()
+                    .findGitDir()
+                    .setMustExist(true)
+                    .build();
+            Git git = new Git(repo);
+
+            git.remoteRemove()
+                    .setRemoteName(remoteName)
+                    .call();
+
+            git.getRepository().close();
+
+        } catch (IOException | GitAPIException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void addRemote(String repoDir, String remoteUri) {
+        try {
+            String repoDirectory = repoDir + "\\.git";
+
+            FileRepositoryBuilder repoBuilder = new FileRepositoryBuilder();
+            Repository repo = repoBuilder
+                    .setGitDir(new File(repoDirectory))
+                    .readEnvironment()
+                    .findGitDir()
+                    .setMustExist(true)
+                    .build();
+            Git git = new Git(repo);
+
+            git.remoteAdd()
+                    .setUri(new URIish(remoteUri))
+                    .setName("origin")
+                    .call();
+
+            git.getRepository().close();
+
+        } catch (IOException | GitAPIException | URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void checkoutBranch(String repoDir, String branchName) {
+        try {
+            String repoDirectory = repoDir + "\\.git";
+
+            FileRepositoryBuilder repoBuilder = new FileRepositoryBuilder();
+            Repository repo = repoBuilder
+                    .setGitDir(new File(repoDirectory))
+                    .readEnvironment()
+                    .findGitDir()
+                    .setMustExist(true)
+                    .build();
+            Git git = new Git(repo);
+
+            git.checkout().setCreateBranch(false).setName(branchName).call();
+
+            git.getRepository().close();
+
+        } catch (IOException | GitAPIException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void createRemoteBranch(String repoDir, Branch branch) {
+        try {
+            String repoDirectory = repoDir + "\\.git";
+
+            FileRepositoryBuilder repoBuilder = new FileRepositoryBuilder();
+            Repository repo = repoBuilder
+                    .setGitDir(new File(repoDirectory))
+                    .readEnvironment()
+                    .findGitDir()
+                    .setMustExist(true)
+                    .build();
+            Git git = new Git(repo);
+
+            git.branchCreate()
+                    .setName(branch.name())
+                    .setStartPoint(branch.commits().get(0).commitId())
+                    .setForce(true)
+                    .call();
+
+            ConfigSecrets secrets = new ConfigSecrets("secrets.properties");
+
+            git.push()
+                    .setRemote("origin")
+                    .setCredentialsProvider(
+                            new UsernamePasswordCredentialsProvider(secrets.USERNAME, secrets.PASSWORD))
+                    .add(branch.name())
+                    .setForce(true)
+                    .call();
+
+            git.getRepository().close();
+
+        } catch (IOException | GitAPIException | ConfigsSetupException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

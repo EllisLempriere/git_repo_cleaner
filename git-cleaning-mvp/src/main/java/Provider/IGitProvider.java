@@ -28,9 +28,5 @@ public interface IGitProvider {
 
     void pushDeleteRemoteTag(Tag tag) throws GitPushTagDeletionException;
 
-    void addRemote(String remoteUri);
-
-    void removeRemote(String remoteName);
-
-    void checkoutBranch(String branchName);
+    void shutdownRepo();
 }

@@ -53,16 +53,14 @@ public class GitProvider implements IGitProvider {
         int count = 0;
         while (true) {
             FileRepositoryBuilder repoBuilder = new FileRepositoryBuilder();
-            try (Repository repo = repoBuilder
-                    .setGitDir(new File(repoDirectory))
-                    .readEnvironment()
-                    .findGitDir()
-                    .setMustExist(true)
-                    .build();
-                 Git git = new Git(repo)) {
-
-                this.repo = repo;
-                this.git = git;
+            try {
+                this.repo = repoBuilder
+                        .setGitDir(new File(repoDirectory))
+                        .readEnvironment()
+                        .findGitDir()
+                        .setMustExist(true)
+                        .build();
+                this.git = new Git(repo);
 
                 return;
 
@@ -77,7 +75,6 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void cloneRepo(String repoDir, String remoteUri) throws GitCloningException {
-        // TODO - Should repoDir have requirements on it for filepath?
         if (repoDir == null)
             throw new IllegalArgumentException("Repo directory cannot be null");
         if (remoteUri == null)
@@ -85,15 +82,13 @@ public class GitProvider implements IGitProvider {
 
         int count = 0;
         while (true) {
-            try (Git git = Git.cloneRepository()
+            try (Git ignored = Git.cloneRepository()
                     .setURI(remoteUri)
                     .setRemote("origin")
                     .setDirectory(new File(repoDir))
                     .setCloneAllBranches(true)
                     .setCredentialsProvider(CREDENTIALS)
                     .call()) {
-
-                git.close();
 
                 return;
 
@@ -328,6 +323,9 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void pushDeleteRemoteBranch(Branch branch) throws GitPushBranchDeletionException {
+        if (git == null)
+            throw new GitNotSetupException("Git not started up, call setupRepo first");
+
         int count = 0;
         while (true) {
             try {
@@ -355,6 +353,9 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void pushNewTags() throws GitPushNewTagsException {
+        if (git == null)
+            throw new GitNotSetupException("Git not started up, call setupRepo first");
+
         int count = 0;
         while (true) {
             try {
@@ -381,6 +382,9 @@ public class GitProvider implements IGitProvider {
 
     @Override
     public void pushDeleteRemoteTag(Tag tag) throws GitPushTagDeletionException {
+        if (git == null)
+            throw new GitNotSetupException("Git not started up, call setupRepo first");
+
         int count = 0;
         while (true) {
             try {
@@ -407,6 +411,12 @@ public class GitProvider implements IGitProvider {
     }
 
     @Override
+    public void shutdownRepo() {
+        if (this.git != null)
+            this.git.getRepository().close();
+    }
+
+
     public void addRemote(String remoteUri) {
         int count = 0;
         while (true) {
@@ -425,7 +435,6 @@ public class GitProvider implements IGitProvider {
         }
     }
 
-    @Override
     public void removeRemote(String remoteName) {
         int count = 0;
         while (true) {
@@ -443,7 +452,6 @@ public class GitProvider implements IGitProvider {
         }
     }
 
-    @Override
     public void checkoutBranch(String branchName) {
         int count = 0;
         while (true) {
@@ -457,11 +465,6 @@ public class GitProvider implements IGitProvider {
                     throw new RuntimeException();
             }
         }
-    }
-
-    public void shutdownRepo() {
-        if (this.git != null)
-            this.git.getRepository().close();
     }
 
 

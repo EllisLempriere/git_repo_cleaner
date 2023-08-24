@@ -134,7 +134,7 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
             LOGGER.log(Level.INFO, "All changes pushed to remote");
 
-        } catch (GitBranchFetchException e) { // TODO - This exception and down, maybe do not stop execution?
+        } catch (GitBranchFetchException e) {
             LOGGER.log(Level.SEVERE, e.getMessage());
             LOGGER.log(Level.SEVERE, "Halting execution due to failure to fetch branch list");
         } catch (GitTagFetchException e) {

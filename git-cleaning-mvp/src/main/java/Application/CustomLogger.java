@@ -1,6 +1,9 @@
 package Application;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.logging.*;
@@ -13,7 +16,17 @@ public class CustomLogger implements ICustomLogger {
         LOGGER.setLevel(Level.FINE);
 
         DateFormat dateFormat = new SimpleDateFormat("ddMMyyyy");
-        String logName = dateFormat.format(System.currentTimeMillis()) + "Log.log";
+        int logNum = 0;
+        String logName = dateFormat.format(System.currentTimeMillis()) + "Log-" + logNum + ".log";
+        Path logPath = Paths.get(
+                "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner\\git-cleaning-mvp\\Outputs\\Logs\\" + logName);
+
+        while (Files.exists(logPath)){
+            logNum++;
+            logName = dateFormat.format(System.currentTimeMillis()) + "Log-" + logNum + ".log";
+            logPath = Paths.get(
+                    "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner\\git-cleaning-mvp\\Outputs\\Logs\\" + logName);
+        }
 
         try {
             Handler handler = new FileHandler(logName, 5000, 1);

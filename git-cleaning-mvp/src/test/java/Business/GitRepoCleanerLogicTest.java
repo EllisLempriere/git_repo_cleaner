@@ -114,17 +114,17 @@ public class GitRepoCleanerLogicTest {
         repoCleaningInfoList.add(info2);
 
         GitRepoCleanerLogic logic = createDefaultTestLogic();
-        GitRepoCleanerLogic cleanerSpy = spy(logic);
+        GitRepoCleanerLogic logicSpy = spy(logic);
 
         // act
-        cleanerSpy.cleanRepos();
+        logicSpy.cleanRepos();
 
         // assert
         try {
-            verify(cleanerSpy, times(1)).selectRepo(info1.repoDir(), info1.remoteUri());
-            verify(cleanerSpy, times(1)).cleanRepo(info1);
-            verify(cleanerSpy, times(1)).selectRepo(info2.repoDir(), info2.remoteUri());
-            verify(cleanerSpy, times(1)).cleanRepo(info2);
+            verify(logicSpy, times(1)).selectRepo(info1.repoDir(), info1.remoteUri());
+            verify(logicSpy, times(1)).cleanRepo(info1);
+            verify(logicSpy, times(1)).selectRepo(info2.repoDir(), info2.remoteUri());
+            verify(logicSpy, times(1)).cleanRepo(info2);
 
         } catch (GitCloningException | GitUpdateException | GitStartupException e) {
             throw new RuntimeException(e);

@@ -1,0 +1,17 @@
+Leave test artifacts/results in place for inspection after test run (use seperate folder)
+Don't edit artifact master copies - eliminate the need to reset master copy of repo
+Name constants (local repo dir, remote uri)
+Abstract out setting up repo
+Better test naming
+(See deleteTagTest3 for reformatting)
+repoEqual -> repoWithSameTagsAndBranches
+
+Edit provider API to deal with more specific objects (not just business objects)
+Take a look at updateRepo
+	Should not handle setup
+Clarify clone vs setup vs other methods
+	Setup goes private, each method gets an explicit statement for which repo it is acting on
+GitProvider implementing AutoClosable
+
+RepoCleaningInfo naming
+(See cleanReposTest1 for reformatting)

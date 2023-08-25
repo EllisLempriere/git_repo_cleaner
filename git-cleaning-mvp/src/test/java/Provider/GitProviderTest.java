@@ -786,25 +786,25 @@ public class GitProviderTest {
     void deleteTagTest3() {
         try {
             // arrange
-            GitProvider provider = getProviderWithValidSecrets();
+            GitProvider gp = getProviderWithValidSecrets();
 
             String repoDir = "C:\\Users\\ellis\\Documents\\repos\\tag-branch-manip-tests-delete-tag-3";
             if (Files.exists(Paths.get(repoDir)))
                 FileUtils.deleteDirectory(new File(repoDir));
-            provider.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git");
-            provider.updateRepo(repoDir);
+            gp.cloneRepo(repoDir, "https://gitlab.com/EllisLempriere/tag-branch-manip-tests.git");
+            gp.updateRepo(repoDir);
 
             Tag tagToDelete = new Tag("notInRepo", Collections.emptyList());
 
+            String expectedRepoDir = "C:\\Users\\ellis\\Documents\\git-cleaner-expected-repos\\tag-branch-manip-tests";
+
             // act
-            provider.deleteTag(tagToDelete);
+            gp.deleteTag(tagToDelete);
 
             // assert
-            provider.updateRepo(repoDir);
-            assertTrue(repoEqual(repoDir,
-                    "C:\\Users\\ellis\\Documents\\git-cleaner-expected-repos\\tag-branch-manip-tests"));
+            assertTrue(repoEqual(repoDir, expectedRepoDir));
 
-            provider.shutdownRepo();
+            gp.shutdownRepo();
             FileUtils.deleteDirectory(new File(repoDir));
 
         } catch (GitCloningException | GitUpdateException | GitStartupException | IOException |

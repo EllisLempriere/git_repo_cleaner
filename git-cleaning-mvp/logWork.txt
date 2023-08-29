@@ -1,0 +1,43 @@
+[HH:MM:SS.mmm]-[INFO] - Beginning program
+[HH:MM:SS.mmm]-[INFO] - Reading in global configs: retries=3, secrets file=secrets.properties
+[HH:MM:SS.mmm]-[INFO] - Reading in first repo configs: directory=C:\Users\ellis\Documents\repos\integration-test-repo1, remote_uri=https://gitlab.com/EllisLempriere/integration-tests-path1.git, excluded_branches=[main], stale_branch_inactivity_days=60, stale_tag_days=30, notification_before_action_days=7, recipients=[]
+[HH:MM:SS.mmm]-[INFO] - Reading in second repo configs: directory=C:\Users\ellis\Documents\repos\integration-test-repo2, remote_uri=https://gitlab.com/EllisLempriere/integration-tests-path2.git, excluded_branches=[main, exclude], stale_branch_inactivity_days=60, stale_tag_days=30, notification_before_action_days=7, recipients=[tim@mail]
+[HH:MM:SS.mmm]-[INFO] - Starting cleaning on 2 repo(s)
+[HH:MM:SS.mmm]-[INFO] - R001 - START REPO: https://gitlab.com/EllisLempriere/integration-tests-path1.git
+[HH:MM:SS.mmm]-[INFO] - R001 - Local repo does not exist, cloning from remote to 'C:\Users\ellis\Documents\repos\integration-test-repo1'
+[HH:MM:SS.mmm]-[INFO] - R001 - Fetched branch list for repo: archive, doNothing, emptyStaleBranch, notifyPendingArchive
+[HH:MM:SS.mmm]-[INFO] - R001 - Fetched tag list for repo: zArchiveBranch_YYYYMMDD_notifyPendingDelete, zArchiveBranch_YYYYMMDD_delete, notAnArchiveTag
+[HH:MM:SS.mmm]-[INFO] - R001 - Begin processing branches
+[HH:MM:SS.mmm]-[INFO] - R001:B001 - Inspecting branch 'archive'. Last commit on DD/MM/YY, 60 days ago. Archiving branch as tag 'zArchiveBranch_YYYYMMDD_archive'
+[HH:MM:SS.mmm]-[INFO] - R001:B001 - Notification of archival sent to: ellis@pslfamily.org
+[HH:MM:SS.mmm]-[INFO] - R001:B002 - Inspecting branch 'doNothing'. Last commit on DD/MM/YY, 1 day ago. Nothing to do
+[HH:MM:SS.mmm]-[INFO] - R001:B003 - Inspecting branch 'emptyStaleBranch'. Last commit on 01/01/23, X days ago. Archiving branch as tag 'zArchiveBranch_YYYYMMDD_emptyStaleBranch'
+[HH:MM:SS.mmm]-[INFO] - R001:B003 - Notification of archival sent to: ellis@pslfamily.org
+[HH:MM:SS.mmm]-[INFO] - R001:B004 - Inspecting branch 'main'. Branch is in excluded branches list. Skipping
+[HH:MM:SS.mmm]-[INFO] - R001:B005 - Inspecting branch 'notifyPendingArchive'. Last commit on DD/MM/YY, 53 days ago. Notifying developer(s) of pending branch archival
+[HH:MM:SS.mmm]-[INFO] - R001:B005 - Notification of pending archival sent to: ellis@pslfamily.org
+[HH:MM:SS.mmm]-[INFO] - R001 - Begin processing tags
+[HH:MM:SS.mmm]-[INFO] - R001:T001 - Inspecting tag 'zArchiveBranch_YYYYMMDD_delete'. Tag is 30 days old. Deleting archive tag
+[HH:MM:SS.mmm]-[INFO] - R001:T001 - Notification of archive tag deletion sent to: ellis@pslfamily.org
+[HH:MM:SS.mmm]-[INFO] - R001:T002 - Inspecting tag 'zArchiveBranch_YYYYMMDD_notifyPendingDelete'. Tag is 23 days old. Notifying developer(s) of pending archive tag deletion
+[HH:MM:SS.mmm]-[INFO] - R001:T002 - Notification of pending archive tag deletion sent to: ellis@pslfamily.org
+[HH:MM:SS.mmm]-[INFO] - R001:T003 - Inspecting tag 'notAnArchiveTag'. Tag is not an archive tag. Skipping
+[HH:MM:SS.mmm]-[INFO] - R001 - Pushed 2 stale branch removal(s) to remote: archive, emptyStaleBranch
+[HH:MM:SS.mmm]-[INFO] - R001 - Pushed 2 newly created archive tag(s) to remote: zArchiveBranch_YYYYMMDD_archive, zArchiveBranch_YYYYMMDD_emptyStaleBranch
+[HH:MM:SS.mmm]-[INFO] - R001 - Pushed 1 stale archive tag deletion(s) to remote: zArchiveBranch_YYYYMMDD_delete
+[HH:MM:SS.mmm]-[INFO] - R002 - START REPO: https://gitlab.com/EllisLempriere/integration-tests-path2.git
+[HH:MM:SS.mmm]-[INFO] - R002 - Local repo does not exist, cloning from remote to 'C:\Users\ellis\Documents\repos\integration-test-repo2'
+[HH:MM:SS.mmm]-[INFO] - R002 - Fetched branch list for repo: exclude, main, merge
+[HH:MM:SS.mmm]-[INFO] - R002 - Fetched tag list for repo:
+[HH:MM:SS.mmm]-[INFO] - R002 - Begin processing branches
+[HH:MM:SS.mmm]-[INFO] - R002:B001 - Branch 'exclude' is in excluded branches list. Skipping
+[HH:MM:SS.mmm]-[INFO] - R002:B002 - Branch 'main' is in excluded branches list. Skipping
+[HH:MM:SS.mmm]-[INFO] - R002:B003 - Last commit to branch 'merge' on DD/MM/YY, 80 days ago. Archiving branch as tag 'zArchiveBranch_YYYYMMDD_merge'
+[HH:MM:SS.mmm]-[INFO] - R002:B003 - Notification of archival sent to: john@mail, fred@mail, ellis@pslfamily.org, tim@mail
+[HH:MM:SS.mmm]-[INFO] - R002 - No tags to process
+[HH:MM:SS.mmm]-[INFO] - R002 - Pushed 1 stale branch removal(s) to remote: merge
+[HH:MM:SS.mmm]-[INFO] - R002 - Pushed 1 newly created archive tag(s) to remote: zArchiveBranch_YYYYMMDD_merge
+[HH:MM:SS.mmm]-[INFO] - R002 - Pushed 0 stale archive tag deletion(s) to remote
+[HH:MM:SS.mmm]-[INFO] - R002 - Finished cleaning repo
+[HH:MM:SS.mmm]-[INFO] - Completed cleaning 2 repo(s)
+[HH:MM:SS.mmm]-[INFO] - Ending program

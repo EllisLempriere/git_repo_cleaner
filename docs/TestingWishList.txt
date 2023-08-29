@@ -15,3 +15,5 @@ GitProvider implementing AutoClosable
 
 RepoCleaningInfo naming
 (See cleanReposTest1 for reformatting)
+
+Packaging for release

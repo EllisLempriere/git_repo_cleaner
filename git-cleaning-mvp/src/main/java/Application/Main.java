@@ -17,7 +17,6 @@ import Provider.IGitProvider;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -74,8 +73,9 @@ public class Main {
             logger.log(Level.INFO, "Ending program");
 
         } catch (ConfigsSetupException e) {
-            logger.log(Level.SEVERE, "Issue in reading config, halting execution");
-            logger.log(Level.SEVERE, "Error: " + Arrays.toString(e.getStackTrace()));
+            logger.logError("Issue in reading config, halting execution. Error: " + e.getMessage());
+        } catch (RuntimeException e) {
+            logger.logError("Unexpected error, halting execution. Error: " + e.getMessage());
         }
     }
 }

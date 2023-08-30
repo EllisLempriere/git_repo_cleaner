@@ -66,6 +66,32 @@ public class CustomLogger implements ICustomLogger {
         log(Level.INFO, prefix + message);
     }
 
+    @Override
+    public void logError(String message) {
+        log(Level.SEVERE, message);
+    }
+
+    @Override
+    public void logRepoError(String message, int repoNum) {
+        String prefix = String.format("R%s - ", padNum(repoNum));
+
+        log(Level.SEVERE, prefix + message);
+    }
+
+    @Override
+    public void logBranchWarn(String message, int repoNum, int branchNum) {
+        String prefix = String.format("R%s:B%s - ", padNum(repoNum), padNum(branchNum));
+
+        log(Level.WARNING, prefix + message);
+    }
+
+    @Override
+    public void logTagWarn(String message, int repoNum, int tagNum) {
+        String prefix = String.format("R%s:T%s - ", padNum(repoNum), padNum(tagNum));
+
+        log(Level.WARNING, prefix + message);
+    }
+
 
     private String padNum(int number) {
         return String.format("%03d", number);

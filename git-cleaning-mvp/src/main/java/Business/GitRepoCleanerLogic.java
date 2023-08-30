@@ -13,7 +13,6 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
 
 public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
@@ -59,14 +58,17 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
                 repoNum++;
 
             } catch (GitCloningException e) {
-                LOGGER.log(Level.SEVERE, e.getMessage());
-                LOGGER.log(Level.SEVERE, "Halting execution due to failed remote repo clone");
+                LOGGER.logRepoError(
+                        String.format("Failed to clone repo due to '%s'. Skipping cleaning repo",
+                        e.getMessage()), repoNum);
             } catch (GitUpdateException e) {
-                LOGGER.log(Level.SEVERE, e.getMessage());
-                LOGGER.log(Level.SEVERE, "Halting execution due to failed local repo update");
+                LOGGER.logRepoError(
+                        String.format("Failed to update local repo due to '%s'. Skipping cleaning repo",
+                        e.getMessage()), repoNum);
             } catch (GitStartupException e) {
-                LOGGER.log(Level.SEVERE, e.getMessage());
-                LOGGER.log(Level.SEVERE, "Halting execution due to failed initialization of git object");
+                LOGGER.logRepoError(
+                        String.format("Failed to access local repo due to '%s'. Skipping cleaning repo",
+                        e.getMessage()), repoNum);
             }
         }
     }
@@ -86,27 +88,33 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
     @Override
     public void cleanRepo(RepoCleaningInfo repoCleaningInfo, int repoNum) {
+        List<Branch> deletedBranches;
+        List<Tag> deletedTags;
         try {
             List<Branch> branches = GIT.getBranches();
-            List<String> branchNames = new ArrayList<>();
-            for (Branch b : branches)
-                branchNames.add(b.name());
+            List<String> branchNames = branches.stream().map(Branch::name).toList();
             LOGGER.logRepoMsg(String.format("Fetching branch list for repo: %s", branchNames), repoNum);
 
             List<Tag> tags = GIT.getTags();
-            List<String> tagNames = new ArrayList<>();
-            for (Tag t : tags)
-                tagNames.add(t.name());
+            List<String> tagNames = tags.stream().map(Tag::name).toList();
             LOGGER.logRepoMsg(String.format("Fetching tag list for repo: %s", tagNames), repoNum);
 
             LOGGER.logRepoMsg("Begin processing branches", repoNum);
-            List<Branch> deletedBranches = cleanBranches(branches, repoCleaningInfo.repoId(),
+            deletedBranches = cleanBranches(branches, repoCleaningInfo.repoId(),
                     repoCleaningInfo.excludedBranches(), repoCleaningInfo.takeActionCountsDays(), repoNum);
 
             LOGGER.logRepoMsg("Begin processing tags", repoNum);
-            List<Tag> deletedTags = cleanTags(tags, repoCleaningInfo.repoId(), repoCleaningInfo.takeActionCountsDays(),
+            deletedTags = cleanTags(tags, repoCleaningInfo.repoId(), repoCleaningInfo.takeActionCountsDays(),
                     repoNum);
 
+        } catch (GitBranchFetchException | GitTagFetchException e) {
+            LOGGER.logRepoError(
+                    String.format("Error: '%s'. Skipping cleaning repo",
+                    e.getMessage()), repoNum);
+            return;
+        }
+
+        try {
             List<String> deletedBranchNames = new ArrayList<>();
             for (Branch b : deletedBranches) {
                 GIT.pushDeleteRemoteBranch(b);
@@ -133,21 +141,10 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
                     String.format("Pushing %d stale archive tag deletion(s) to remote: %s",
                     deletedTags.size(), deletedTagNames), repoNum);
 
-        } catch (GitBranchFetchException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage());
-            LOGGER.log(Level.SEVERE, "Halting execution due to failure to fetch branch list");
-        } catch (GitTagFetchException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage());
-            LOGGER.log(Level.SEVERE, "Halting execution due to failure to fetch tag list");
-        } catch (GitPushBranchDeletionException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage());
-            LOGGER.log(Level.SEVERE, "Halting execution due to failure to push deleted branch to remote");
-        } catch (GitPushNewTagsException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage());
-            LOGGER.log(Level.SEVERE, "Halting execution due to failure to push new tags to remote");
-        } catch (GitPushTagDeletionException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage());
-            LOGGER.log(Level.SEVERE, "Halting execution due to failure to push deletion of tag to remote");
+        } catch (GitPushBranchDeletionException | GitPushNewTagsException | GitPushTagDeletionException e) {
+            LOGGER.logRepoError(
+                    String.format("Error: '%s'. Cannot push changes to remote",
+                    e.getMessage()), repoNum);
         }
     }
 
@@ -194,9 +191,9 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
                     NOTIFICATION_LOGIC.sendNotificationPendingArchival(branch, repoId, repoNum, branchNum);
 
                 } catch (SendEmailException e) {
-                    LOGGER.log(Level.WARNING,
+                    LOGGER.logBranchWarn(
                             String.format("Failed to notify of pending archival of branch '%s'",
-                            branch.name()));
+                            branch.name()), repoNum, branchNum);
                 }
 
             } else if (daysSinceCommit >= takeActionCountsDays.staleBranchInactivityDays()) {
@@ -232,25 +229,27 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
             NOTIFICATION_LOGIC.sendNotificationArchival(branch, newArchiveTag, repoId, repoNum, branchNum);
 
         } catch (GitCreateTagException e) {
-            LOGGER.log(Level.WARNING,
-                    String.format("Failed to create archive tag '%s', branch '%s' not archived",
-                    newArchiveTag.name(), branch.name()));
+            LOGGER.logBranchWarn(
+                    String.format("Error: '%s'. Branch '%s' not archived",
+                    e.getMessage(), branch.name()), repoNum, branchNum);
+
         } catch (GitBranchDeletionException e) {
-            LOGGER.log(Level.WARNING,
-                    String.format("Failed to delete stale branch '%s', branch not archived, removing archive tag '%s'",
-                    branch.name(), newArchiveTag.name()));
+            LOGGER.logBranchWarn(
+                    String.format("Error: '%s'. Cannot archive branch",
+                    e.getMessage()), repoNum, branchNum);
             try {
                 GIT.deleteTag(newArchiveTag);
-                LOGGER.log(Level.WARNING,
-                        String.format("Archive tag '%s' successfully removed", newArchiveTag.name()));
+
             } catch (GitTagDeletionException ex) {
-                LOGGER.log(Level.WARNING,
-                        String.format("Failed to delete archive tag '%s', tag is extraneous", newArchiveTag.name()));
+                LOGGER.logBranchWarn(
+                        String.format("Error: '%s'. Archive tag '%s' is extra",
+                        ex.getMessage(), newArchiveTag.name()), repoNum, branchNum);
             }
+
         } catch (SendEmailException e) {
-            LOGGER.log(Level.WARNING,
+            LOGGER.logBranchWarn(
                     String.format("Failed to notify of archival of branch '%s'",
-                    branch.name()));
+                    branch.name()), repoNum, branchNum);
         }
     }
 
@@ -287,9 +286,9 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
                     NOTIFICATION_LOGIC.sendNotificationPendingTagDeletion(tag, repoId, repoNum, tagNum);
 
                 } catch (SendEmailException e) {
-                    LOGGER.log(Level.WARNING,
-                            String.format("Failed to notify of pending deletion of archive tag '%s'",
-                            tag.name()));
+                    LOGGER.logTagWarn(
+                            String.format("Failed to notify of pending deletion of tag '%s'",
+                            tag.name()), repoNum, tagNum);
                 }
 
             } else if (daysSinceCreation >= takeActionCountsDays.staleTagDays()) {
@@ -318,12 +317,13 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
             NOTIFICATION_LOGIC.sendNotificationTagDeletion(tag, repoId, repoNum, tagNum);
 
         } catch (GitTagDeletionException e) {
-            LOGGER.log(Level.WARNING,
-                    String.format("Unable to delete archive tag '%s'", tag.name()));
+            LOGGER.logTagWarn(
+                    String.format("Error: '%s'. Archive tag not deleted",
+                    e.getMessage()), repoNum, tagNum);
         } catch (SendEmailException e) {
-            LOGGER.log(Level.WARNING,
-                    String.format("Failed to notify of deletion of archive tag '%s'",
-                    tag.name()));
+            LOGGER.logTagWarn(
+                    String.format("Failed to notify of deletion of tag '%s'",
+                    tag.name()), repoNum, tagNum);
         }
     }
 

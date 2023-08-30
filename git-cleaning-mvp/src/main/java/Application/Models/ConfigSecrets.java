@@ -30,8 +30,7 @@ public class ConfigSecrets {
             reader.close();
 
         } catch (IOException e) {
-            throw new ConfigsSetupException(
-                    String.format("Failed to read config secrets because: %s", e.getMessage()), e);
+            throw new ConfigsSetupException("Failed to read config secrets from file", e);
         }
 
         if (USERNAME == null)

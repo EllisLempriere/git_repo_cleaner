@@ -29,7 +29,7 @@ public class Main {
         int executionTime = Integer.parseInt(args[0]);
         String configFile = args[1];
 
-        if (executionTime == 0)
+        if (executionTime < 0)
             executionTime = (int) Instant.now().getEpochSecond();
 
         try {

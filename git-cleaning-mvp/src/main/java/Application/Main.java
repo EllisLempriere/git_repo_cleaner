@@ -15,6 +15,7 @@ import Provider.GitProvider;
 import Provider.IEmailProvider;
 import Provider.IGitProvider;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -27,14 +28,21 @@ public class Main {
         logger.log(Level.INFO, "Beginning program");
 
         int executionTime = Integer.parseInt(args[0]);
+        String configFile = args[1];
+
+        if (executionTime == 0)
+            executionTime = (int) Instant.now().getEpochSecond();
 
         try {
-            logger.log(Level.INFO, "Starting set up");
-            ConfigGetter configGetter = new ConfigGetter("config.json");
+            ConfigGetter configGetter = new ConfigGetter(configFile);
             Configs configs = configGetter.getConfigs();
+
+            logger.log(Level.INFO, String.format("Reading in global configs: retries=%d, secrets_file=%s",
+                    configs.retries(), configs.config_secrets().FILE));
 
             List<RepoCleaningInfo> repoCleaningInfoList = new ArrayList<>(configs.repos().size());
             List<RepoNotificationInfo> repoNotificationInfoList = new ArrayList<>(configs.repos().size());
+            int i = 0;
             for (RepoConfig repo : configs.repos()) {
                 TakeActionCountsDays actionCountsDays = new TakeActionCountsDays(
                         repo.stale_branch_inactivity_days(), repo.stale_tag_days(), repo.notification_before_action_days());
@@ -44,18 +52,26 @@ public class Main {
 
                 repoNotificationInfoList.add(new RepoNotificationInfo(repo.remote_uri(), actionCountsDays,
                         repo.recipients()));
+
+                logger.log(Level.INFO,
+                        String.format("Reading in repo %d configs: directory=%s, remote_uri=%s, excluded_branches=%s, " +
+                        "stale_branch_inactivity_days=%d, stale_tag_days=%d, notification_before_action_days=%d, " +
+                        "recipients=%s", ++i, repo.directory(), repo.remote_uri(), repo.excluded_branches(),
+                        repo.stale_branch_inactivity_days(), repo.stale_tag_days(), repo.notification_before_action_days(),
+                        repo.recipients()));
             }
 
             IEmailProvider emailProvider = new EmailProvider();
-            INotificationLogic notificationLogic = new NotificationLogic(emailProvider, repoNotificationInfoList);
+            INotificationLogic notificationLogic = new NotificationLogic(emailProvider, repoNotificationInfoList, logger);
 
             IGitProvider gitProvider = new GitProvider(configs.config_secrets(), configs.retries());
             IGitRepoCleanerLogic gitRepoCleanerLogic = new GitRepoCleanerLogic(repoCleaningInfoList,
                     gitProvider, notificationLogic, logger, executionTime);
-            logger.log(Level.INFO, "Finished bootstrapping");
 
             logger.log(Level.INFO, "Starting cleaning on " + configs.repos().size() + " repo(s)");
             gitRepoCleanerLogic.cleanRepos();
+
+            logger.log(Level.INFO, "Ending program");
 
         } catch (ConfigsSetupException e) {
             logger.log(Level.SEVERE, "Issue in reading config, halting execution");

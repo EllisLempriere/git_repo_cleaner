@@ -12,6 +12,8 @@ Take a look at updateRepo
 Clarify clone vs setup vs other methods
 	Setup goes private, each method gets an explicit statement for which repo it is acting on
 GitProvider implementing AutoClosable
+Make provider directly handle remote refs
+Move retries to be a business layer concern
 
 RepoCleaningInfo naming
 (See cleanReposTest1 for reformatting)

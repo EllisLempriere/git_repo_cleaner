@@ -1,5 +1,6 @@
 package Business;
 
+import Application.ICustomLogger;
 import Business.Models.*;
 import Provider.IEmailProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +22,8 @@ public class NotificationLogicTest {
     @BeforeEach
     void setupLogic() {
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
-        notificationLogic = new NotificationLogic(mockEmailProvider, new ArrayList<>());
+        ICustomLogger mockLogger = mock(ICustomLogger.class);
+        notificationLogic = new NotificationLogic(mockEmailProvider, new ArrayList<>(), mockLogger);
     }
 
 
@@ -31,7 +33,7 @@ public class NotificationLogicTest {
         // arrange
 
         // act/assert
-        assertThrows(IllegalArgumentException.class, () -> new NotificationLogic(null, new ArrayList<>()));
+        assertThrows(IllegalArgumentException.class, () -> new NotificationLogic(null, new ArrayList<>(), mock(ICustomLogger.class)));
     }
 
     @Test
@@ -41,7 +43,7 @@ public class NotificationLogicTest {
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
 
         // act/assert
-        assertThrows(IllegalArgumentException.class, () -> new NotificationLogic(mockEmailProvider, null));
+        assertThrows(IllegalArgumentException.class, () -> new NotificationLogic(mockEmailProvider, null, mock(ICustomLogger.class)));
     }
 
     @Test
@@ -51,7 +53,7 @@ public class NotificationLogicTest {
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
 
         // act
-        NotificationLogic result = new NotificationLogic(mockEmailProvider, new ArrayList<>());
+        NotificationLogic result = new NotificationLogic(mockEmailProvider, new ArrayList<>(), mock(ICustomLogger.class));
 
         // assert
         assertInstanceOf(NotificationLogic.class, result);
@@ -64,7 +66,7 @@ public class NotificationLogicTest {
         // arrange
 
         // act/assert
-        assertThrows(IllegalArgumentException.class, () -> notificationLogic.sendNotificationPendingArchival(null, ""));
+        assertThrows(IllegalArgumentException.class, () -> notificationLogic.sendNotificationPendingArchival(null, "", 1, 1));
     }
 
     @Test
@@ -74,7 +76,7 @@ public class NotificationLogicTest {
         Branch mockBranch = new Branch("", new ArrayList<>());
 
         // act/assert
-        assertThrows(IllegalArgumentException.class, () -> notificationLogic.sendNotificationPendingArchival(mockBranch, null));
+        assertThrows(IllegalArgumentException.class, () -> notificationLogic.sendNotificationPendingArchival(mockBranch, null, 1, 1));
     }
 
     @Test
@@ -83,12 +85,13 @@ public class NotificationLogicTest {
         // arrange
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
         List<RepoNotificationInfo> mockInfo = new ArrayList<>();
-        NotificationLogic logic = new NotificationLogic(mockEmailProvider, mockInfo);
+        ICustomLogger mockLogger = mock(ICustomLogger.class);
+        NotificationLogic logic = new NotificationLogic(mockEmailProvider, mockInfo, mockLogger);
 
         Branch mockBranch = new Branch("", new ArrayList<>());
 
         // act/assert
-        assertThrows(IllegalArgumentException.class, () -> logic.sendNotificationPendingArchival(mockBranch, "not_in_repo_info"));
+        assertThrows(IllegalArgumentException.class, () -> logic.sendNotificationPendingArchival(mockBranch, "not_in_repo_info", 1, 1));
     }
 
     @Test
@@ -97,15 +100,16 @@ public class NotificationLogicTest {
         // arrange
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
         List<RepoNotificationInfo> repos = new ArrayList<>();
+        ICustomLogger mockLogger = mock(ICustomLogger.class);
         repos.add(new RepoNotificationInfo("1", new TakeActionCountsDays(0, 0, 0), new ArrayList<>()));
 
-        NotificationLogic logic = new NotificationLogic(mockEmailProvider, repos);
+        NotificationLogic logic = new NotificationLogic(mockEmailProvider, repos, mockLogger);
 
         Branch noCommitsBranch = new Branch("branch", Collections.emptyList());
 
         try {
             // act
-            logic.sendNotificationPendingArchival(noCommitsBranch, repos.get(0).repoId());
+            logic.sendNotificationPendingArchival(noCommitsBranch, repos.get(0).repoId(), 1, 1);
 
             // assert
             verify(mockEmailProvider, never()).sendEmail(anyString(), anyString(), anyString());
@@ -120,6 +124,8 @@ public class NotificationLogicTest {
     void sendNotificationPendingArchivalTest5() {
         // arrange
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
+        ICustomLogger mockLogger = mock(ICustomLogger.class);
+
         List<String> recipients1 = Arrays.asList("john@email.com", "steve@email.com");
         List<String> recipients2 = Arrays.asList("jane@email.com", "susan@email.com");
 
@@ -127,13 +133,13 @@ public class NotificationLogicTest {
         repos.add(new RepoNotificationInfo("1", new TakeActionCountsDays(60, 30, 7), recipients1));
         repos.add(new RepoNotificationInfo("2", new TakeActionCountsDays(90, 60, 14), recipients2));
 
-        NotificationLogic logic = new NotificationLogic(mockEmailProvider, repos);
+        NotificationLogic logic = new NotificationLogic(mockEmailProvider, repos, mockLogger);
 
         Branch noCommitsBranch = new Branch("branch", Collections.emptyList());
 
         try {
             // act
-            logic.sendNotificationPendingArchival(noCommitsBranch, "1");
+            logic.sendNotificationPendingArchival(noCommitsBranch, "1", 1, 1);
 
             // assert
             verify(mockEmailProvider, times(1)).sendEmail("john@email.com", "Pending archival of branch 'branch'",
@@ -157,10 +163,12 @@ public class NotificationLogicTest {
         // arrange
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
         List<RepoNotificationInfo> repos = new ArrayList<>();
+        ICustomLogger mockLogger = mock(ICustomLogger.class);
+
         List<String> recipients = Arrays.asList("john@email.com", "steve@email.com");
         repos.add(new RepoNotificationInfo("1", new TakeActionCountsDays(60, 30, 7), recipients));
 
-        NotificationLogic logic = new NotificationLogic(mockEmailProvider, repos);
+        NotificationLogic logic = new NotificationLogic(mockEmailProvider, repos, mockLogger);
 
         List<Commit> branchCommits = new ArrayList<>();
         branchCommits.add(new Commit("1", 0, "sam@email.com"));
@@ -174,7 +182,7 @@ public class NotificationLogicTest {
 
         try {
             // act
-            logic.sendNotificationPendingArchival(branch, "1");
+            logic.sendNotificationPendingArchival(branch, "1", 1, 1);
 
             // assert
             verify(mockEmailProvider, times(1)).sendEmail("john@email.com", "Pending archival of branch 'branch'",

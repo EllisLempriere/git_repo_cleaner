@@ -10,7 +10,7 @@ import java.util.logging.*;
 
 public class CustomLogger implements ICustomLogger {
 
-    private final Logger LOGGER = Logger.getLogger("TempLoggerName");
+    private final Logger LOGGER = Logger.getLogger(CustomLogger.class.getName());
 
     public CustomLogger() {
         LOGGER.setLevel(Level.FINE);
@@ -29,7 +29,7 @@ public class CustomLogger implements ICustomLogger {
         }
 
         try {
-            Handler handler = new FileHandler(logName, 5000, 1);
+            Handler handler = new FileHandler(logName, 5000000, 1);
             handler.setFormatter(new CustomLogFormatter());
 
             LOGGER.setUseParentHandlers(false);
@@ -44,4 +44,31 @@ public class CustomLogger implements ICustomLogger {
     public void log(Level level, String message) {
         LOGGER.log(level, message);
     }
+
+    @Override
+    public void logRepoMsg(String message, int repoNum) {
+        String prefix = String.format("R%s - ", padNum(repoNum));
+
+        log(Level.INFO, prefix + message);
+    }
+
+    @Override
+    public void logBranchMsg(String message, int repoNum, int branchNum) {
+        String prefix = String.format("R%s:B%s - ", padNum(repoNum), padNum(branchNum));
+
+        log(Level.INFO, prefix + message);
+    }
+
+    @Override
+    public void logTagMsg(String message, int repoNum, int tagNum) {
+        String prefix = String.format("R%s:T%s - ", padNum(repoNum), padNum(tagNum));
+
+        log(Level.INFO, prefix + message);
+    }
+
+
+    private String padNum(int number) {
+        return String.format("%03d", number);
+    }
+
 }

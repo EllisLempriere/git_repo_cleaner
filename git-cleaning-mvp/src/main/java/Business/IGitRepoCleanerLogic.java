@@ -9,8 +9,8 @@ public interface IGitRepoCleanerLogic {
 
     void cleanRepos();
 
-    void selectRepo(String repoDir, String remoteUri)
+    void selectRepo(String repoDir, String remoteUri, int repoNum)
             throws GitCloningException, GitUpdateException, GitStartupException;
 
-    void cleanRepo(RepoCleaningInfo repoCleaningInfo);
+    void cleanRepo(RepoCleaningInfo repoCleaningInfo, int repoNum);
 }

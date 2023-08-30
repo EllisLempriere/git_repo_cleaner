@@ -7,6 +7,10 @@ import Provider.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -43,17 +47,16 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
     @Override
     public void cleanRepos() {
+        int repoNum = 1;
         for (RepoCleaningInfo repo : REPOS) {
-            LOGGER.log(Level.INFO, "Beginning cleaning repo with remote: " + repo.remoteUri());
+            LOGGER.logRepoMsg(String.format("START REPO: %s", repo.remoteUri()), repoNum);
 
             try {
-                LOGGER.log(Level.INFO, "Setting up local repo at: " + repo.repoDir());
-                selectRepo(repo.repoDir(), repo.remoteUri());
-                LOGGER.log(Level.INFO, "Local repo set up");
+                selectRepo(repo.repoDir(), repo.remoteUri(), repoNum);
 
-                LOGGER.log(Level.INFO, "Starting cleaning");
-                cleanRepo(repo);
-                LOGGER.log(Level.INFO, "Successfully finished cleaning repo");
+                cleanRepo(repo, repoNum);
+
+                repoNum++;
 
             } catch (GitCloningException e) {
                 LOGGER.log(Level.SEVERE, e.getMessage());
@@ -69,70 +72,66 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
     }
 
     @Override
-    public void selectRepo(String repoDir, String remoteUri)
+    public void selectRepo(String repoDir, String remoteUri, int repoNum)
             throws GitCloningException, GitUpdateException, GitStartupException {
-        LOGGER.log(Level.INFO, "Checking if local repo exists");
         if (!localRepoExist(repoDir)) {
-            LOGGER.log(Level.INFO, "Local repo does not exist, cloning from remote");
+            LOGGER.logRepoMsg(String.format("Local repo does not exist, cloning from remote to '%s'", repoDir), repoNum);
             GIT.cloneRepo(repoDir, remoteUri);
-
-            LOGGER.log(Level.INFO,
-                    String.format("Repo successfully cloned to local at %s", repoDir));
         } else
-            LOGGER.log(Level.INFO, "Local repo exists, continuing");
+            LOGGER.logRepoMsg(String.format("Local repo exists at '%s', updating from remote", repoDir), repoNum);
 
-        LOGGER.log(Level.INFO, "Prepping local repo");
         GIT.setupRepo(repoDir);
-        LOGGER.log(Level.INFO, "Successfully prepped local repo");
-
-        LOGGER.log(Level.INFO, "Updating local repo");
         GIT.updateRepo(repoDir);
-        LOGGER.log(Level.INFO, "Repo successfully updated from remote");
     }
 
     @Override
-    public void cleanRepo(RepoCleaningInfo repoCleaningInfo) {
+    public void cleanRepo(RepoCleaningInfo repoCleaningInfo, int repoNum) {
         try {
-            LOGGER.log(Level.INFO, "Getting branch list");
             List<Branch> branches = GIT.getBranches();
-            LOGGER.log(Level.INFO, "Branch list successfully obtained");
+            List<String> branchNames = new ArrayList<>();
+            for (Branch b : branches)
+                branchNames.add(b.name());
+            LOGGER.logRepoMsg(String.format("Fetching branch list for repo: %s", branchNames), repoNum);
 
-            LOGGER.log(Level.INFO, "Getting tag list");
             List<Tag> tags = GIT.getTags();
-            LOGGER.log(Level.INFO, "Tag list successfully obtained");
+            List<String> tagNames = new ArrayList<>();
+            for (Tag t : tags)
+                tagNames.add(t.name());
+            LOGGER.logRepoMsg(String.format("Fetching tag list for repo: %s", tagNames), repoNum);
 
-            LOGGER.log(Level.INFO, "Cleaning branches");
+            LOGGER.logRepoMsg("Begin processing branches", repoNum);
             List<Branch> deletedBranches = cleanBranches(branches, repoCleaningInfo.repoId(),
-                    repoCleaningInfo.excludedBranches(), repoCleaningInfo.takeActionCountsDays());
-            LOGGER.log(Level.INFO, "Finished cleaning branches");
+                    repoCleaningInfo.excludedBranches(), repoCleaningInfo.takeActionCountsDays(), repoNum);
 
-            LOGGER.log(Level.INFO, "Cleaning tags");
-            List<Tag> deletedTags = cleanTags(tags, repoCleaningInfo.repoId(), repoCleaningInfo.takeActionCountsDays());
-            LOGGER.log(Level.INFO, "Finished cleaning tags");
+            LOGGER.logRepoMsg("Begin processing tags", repoNum);
+            List<Tag> deletedTags = cleanTags(tags, repoCleaningInfo.repoId(), repoCleaningInfo.takeActionCountsDays(),
+                    repoNum);
 
-            LOGGER.log(Level.INFO, "Finished cleaning");
-            LOGGER.log(Level.INFO, "Beginning updating remote");
-
-            LOGGER.log(Level.INFO, "Pushing branch deletions to remote");
+            List<String> deletedBranchNames = new ArrayList<>();
             for (Branch b : deletedBranches) {
-                LOGGER.log(Level.INFO, "Removing stale branch " + b.name() + "from remote");
                 GIT.pushDeleteRemoteBranch(b);
-                LOGGER.log(Level.INFO, "Successfully removed stale branch " + b.name() + " from remote");
+                deletedBranchNames.add(b.name());
             }
-            LOGGER.log(Level.INFO, "Successfully pushed branch deletions to remote");
+            LOGGER.logRepoMsg(
+                    String.format("Pushing %d stale branch removal(s) to remote: %s",
+                    deletedBranches.size(), deletedBranchNames), repoNum);
 
-            LOGGER.log(Level.INFO, "Pushing newly created tags to remote");
+            List<String> newArchiveTags = new ArrayList<>();
+            for (Branch b : deletedBranches)
+                newArchiveTags.add(new ArchiveTagName(EXECUTION_TIME, b.name()).name);
             GIT.pushNewTags();
-            LOGGER.log(Level.INFO, "Successfully pushed new tags to remote");
+            LOGGER.logRepoMsg(
+                    String.format("Pushing %d newly created archive tag(s) to remote: %s",
+                    deletedBranches.size(), newArchiveTags), repoNum);
 
-            LOGGER.log(Level.INFO, "Pushing tag deletions to remote");
+            List<String> deletedTagNames = new ArrayList<>();
             for (Tag t : deletedTags) {
-                LOGGER.log(Level.INFO, "Removing archive tag " + t.name() + " from remote");
                 GIT.pushDeleteRemoteTag(t);
+                deletedTagNames.add(t.name());
             }
-            LOGGER.log(Level.INFO, "Successfully pushed tag deletions to remote");
-
-            LOGGER.log(Level.INFO, "All changes pushed to remote");
+            LOGGER.logRepoMsg(
+                    String.format("Pushing %d stale archive tag deletion(s) to remote: %s",
+                    deletedTags.size(), deletedTagNames), repoNum);
 
         } catch (GitBranchFetchException e) {
             LOGGER.log(Level.SEVERE, e.getMessage());
@@ -163,19 +162,22 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
     // Exposed for testing
     public List<Branch> cleanBranches(List<Branch> branches, String repoId, List<String> excludedBranches,
-                                       TakeActionCountsDays takeActionCountsDays) {
+                                       TakeActionCountsDays takeActionCountsDays, int repoNum) {
         if (branches.isEmpty()) {
-            LOGGER.log(Level.INFO, "No branches to clean");
+            LOGGER.logRepoMsg("No branches to process", repoNum);
             return new ArrayList<>();
         }
 
         List<Branch> deletedBranches = new ArrayList<>();
 
+        int branchNum = 0;
         for (Branch branch : branches) {
-            LOGGER.log(Level.INFO, "Checking branch " + branch.name());
-
+            branchNum++;
             if (excludedBranches.contains(branch.name())) {
-                LOGGER.log(Level.INFO, "Branch " + branch.name() + " is one of excluded branches, skipping");
+                LOGGER.logBranchMsg(
+                        String.format("Inspecting branch '%s'. Branch is in excluded branch list", branch.name()),
+                        repoNum, branchNum);
+                LOGGER.logBranchMsg("Skipping excluded branch", repoNum, branchNum);
                 continue;
             }
 
@@ -184,14 +186,12 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
             if (daysSinceCommit ==
                     takeActionCountsDays.staleBranchInactivityDays() - takeActionCountsDays.notificationBeforeActionDays()) {
-                LOGGER.log(Level.INFO,
-                        String.format("Has been %d days since last commit to branch '%s'. " +
-                        "Notifying developer of pending archival", daysSinceCommit, branch.name()));
-
+                LOGGER.logBranchMsg(
+                        String.format("Inspecting branch '%s'. Last commit on %s, %d day(s) ago",
+                        branch.name(), formatCommitDate(commitTime), daysSinceCommit), repoNum, branchNum);
+                LOGGER.logBranchMsg("Notifying developer(s) of pending branch archival", repoNum, branchNum);
                 try {
-                    NOTIFICATION_LOGIC.sendNotificationPendingArchival(branch, repoId);
-                    LOGGER.log(Level.INFO,
-                            String.format("Notified pending archival of branch '%s'", branch.name()));
+                    NOTIFICATION_LOGIC.sendNotificationPendingArchival(branch, repoId, repoNum, branchNum);
 
                 } catch (SendEmailException e) {
                     LOGGER.log(Level.WARNING,
@@ -200,16 +200,18 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
                 }
 
             } else if (daysSinceCommit >= takeActionCountsDays.staleBranchInactivityDays()) {
-                LOGGER.log(Level.INFO,
-                        String.format("Has been %d days since last commit to branch '%s'. " +
-                        "Archiving branch", daysSinceCommit, branch.name()));
+                LOGGER.logBranchMsg(
+                        String.format("Inspecting branch '%s'. Last commit on %s, %d day(s) ago",
+                        branch.name(), formatCommitDate(commitTime), daysSinceCommit), repoNum, branchNum);
 
-                archiveBranch(branch, repoId);
+                archiveBranch(branch, repoId, repoNum, branchNum);
                 deletedBranches.add(branch);
 
             } else {
-                LOGGER.log(Level.INFO,
-                        String.format("Branch '%s' is %d days old, nothing to do", branch.name(), daysSinceCommit));
+                LOGGER.logBranchMsg(
+                        String.format("Inspecting branch '%s'. Last commit on %s, %d day(s) ago",
+                                branch.name(), formatCommitDate(commitTime), daysSinceCommit), repoNum, branchNum);
+                LOGGER.logBranchMsg("Nothing to do", repoNum, branchNum);
             }
         }
         return deletedBranches;
@@ -217,26 +219,17 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
 
     // Exposed for testing
-    public void archiveBranch(Branch branch, String repoId) {
+    public void archiveBranch(Branch branch, String repoId, int repoNum, int branchNum) {
         ArchiveTagName archiveTagName = new ArchiveTagName(EXECUTION_TIME, branch.name());
         Tag newArchiveTag = new Tag(archiveTagName.name, branch.commits());
 
+        LOGGER.logBranchMsg(String.format("Archiving branch as tag '%s'", newArchiveTag.name()), repoNum, branchNum);
+
         try {
-            LOGGER.log(Level.INFO, "Creating new archive tag " + newArchiveTag.name());
             GIT.createTag(newArchiveTag);
-            LOGGER.log(Level.INFO, "New archive tag " + newArchiveTag.name() + " successfully created");
-
-            LOGGER.log(Level.INFO, "Deleting stale branch " + branch.name());
             GIT.deleteBranch(branch);
-            LOGGER.log(Level.INFO, "Successfully deleted stale branch " + branch.name());
 
-            LOGGER.log(Level.INFO,
-                    String.format("Stale branch '%s' successfully archived as '%s'",
-                    branch.name(), newArchiveTag.name()));
-
-            NOTIFICATION_LOGIC.sendNotificationArchival(branch, newArchiveTag, repoId);
-            LOGGER.log(Level.INFO,
-                    String.format("Notified of archival of branch '%s'", branch.name()));
+            NOTIFICATION_LOGIC.sendNotificationArchival(branch, newArchiveTag, repoId, repoNum, branchNum);
 
         } catch (GitCreateTagException e) {
             LOGGER.log(Level.WARNING,
@@ -263,67 +256,66 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
 
 
     // Exposed for testing
-    public List<Tag> cleanTags(List<Tag> tags, String repoId, TakeActionCountsDays takeActionCountsDays) {
+    public List<Tag> cleanTags(List<Tag> tags, String repoId, TakeActionCountsDays takeActionCountsDays, int repoNum) {
         if (tags.isEmpty()) {
-            LOGGER.log(Level.INFO, "No tags to clean");
+            LOGGER.logRepoMsg("No tags to process", repoNum);
             return new ArrayList<>();
         }
 
         List<Tag> deletedTags = new ArrayList<>();
 
+        int tagNum = 0;
         for (Tag tag : tags) {
-            LOGGER.log(Level.INFO, "Checking tag " + tag.name());
-
+            tagNum++;
             ArchiveTagName archiveTag;
             if ((archiveTag = ArchiveTagName.tryParse(tag.name())) == null) {
-                LOGGER.log(Level.INFO, "Tag " + tag.name() + " is not an archive tag, skipping");
+                LOGGER.logTagMsg(
+                        String.format("Inspecting tag '%s'. Tag is not an archive tag", tag.name()), repoNum, tagNum);
+                LOGGER.logTagMsg("Skipping non archive tag", repoNum, tagNum);
                 continue;
             }
 
             int tagCreationTime = (int) archiveTag.createDate.toInstant().getEpochSecond();
-            int daysSinceCommit = (EXECUTION_TIME - tagCreationTime) / 86400;
+            int daysSinceCreation = (EXECUTION_TIME - tagCreationTime) / 86400;
 
-            if (daysSinceCommit == takeActionCountsDays.staleTagDays() - takeActionCountsDays.notificationBeforeActionDays()) {
-                LOGGER.log(Level.INFO,
-                        String.format("Has been %d days since last commit on tag '%s'. " +
-                        "Notifying developer of pending deletion", daysSinceCommit, tag.name()));
-
+            if (daysSinceCreation == takeActionCountsDays.staleTagDays() - takeActionCountsDays.notificationBeforeActionDays()) {
+                LOGGER.logTagMsg(
+                        String.format("Inspecting tag '%s'. Tag is %s day(s) old",
+                        tag.name(), daysSinceCreation), repoNum, tagNum);
+                LOGGER.logTagMsg("Notifying developer(s) of pending archive tag deletion", repoNum, tagNum);
                 try {
-                    NOTIFICATION_LOGIC.sendNotificationPendingTagDeletion(tag, repoId);
-                    LOGGER.log(Level.INFO,
-                            String.format("Notified of pending deletion of archive tag '%s'", tag.name()));
+                    NOTIFICATION_LOGIC.sendNotificationPendingTagDeletion(tag, repoId, repoNum, tagNum);
+
                 } catch (SendEmailException e) {
                     LOGGER.log(Level.WARNING,
                             String.format("Failed to notify of pending deletion of archive tag '%s'",
                             tag.name()));
                 }
 
-            } else if (daysSinceCommit >= takeActionCountsDays.staleTagDays()) {
-                LOGGER.log(Level.INFO,
-                        String.format("Has been %d days since last commit to tag %s. " +
-                        "Removing archive tag", daysSinceCommit, tag.name()));
+            } else if (daysSinceCreation >= takeActionCountsDays.staleTagDays()) {
+                LOGGER.logTagMsg(
+                        String.format("Inspecting tag '%s'. Tag is %d day(s) old",
+                        tag.name(), daysSinceCreation), repoNum, tagNum);
+                LOGGER.logTagMsg("Deleting stale archive tag", repoNum, tagNum);
 
-                deleteArchiveTag(tag, repoId);
+                deleteArchiveTag(tag, repoId, repoNum, tagNum);
                 deletedTags.add(tag);
 
             } else {
-                LOGGER.log(Level.INFO,
-                        String.format("Tag %s is %d days old, nothing to do", tag.name(), daysSinceCommit));
+                LOGGER.logTagMsg(
+                        String.format("Inspecting tag '%s'. Tag is %d days(s) old",
+                        tag.name(), daysSinceCreation), repoNum, tagNum);
             }
         }
         return deletedTags;
     }
 
     // Exposed for testing
-    public void deleteArchiveTag(Tag tag, String repoId) {
+    public void deleteArchiveTag(Tag tag, String repoId, int repoNum, int tagNum) {
         try {
-            LOGGER.log(Level.INFO, "Deleting archive tag '" + tag.name() + "'");
             GIT.deleteTag(tag);
-            LOGGER.log(Level.INFO, "Successfully removed archive tag '" + tag.name() + "'");
 
-            NOTIFICATION_LOGIC.sendNotificationTagDeletion(tag, repoId);
-            LOGGER.log(Level.INFO,
-                    String.format("Notified of deletion of archive tag '%s'", tag.name()));
+            NOTIFICATION_LOGIC.sendNotificationTagDeletion(tag, repoId, repoNum, tagNum);
 
         } catch (GitTagDeletionException e) {
             LOGGER.log(Level.WARNING,
@@ -333,5 +325,13 @@ public class GitRepoCleanerLogic implements IGitRepoCleanerLogic {
                     String.format("Failed to notify of deletion of archive tag '%s'",
                     tag.name()));
         }
+    }
+
+    private String formatCommitDate(int commitDate) {
+        ZonedDateTime date = ZonedDateTime.ofInstant(Instant.ofEpochSecond(commitDate), ZoneOffset.UTC);
+
+        DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yy");
+
+        return format.format(date);
     }
 }

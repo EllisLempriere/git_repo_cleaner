@@ -7,12 +7,15 @@ import java.util.Properties;
 
 public class ConfigSecrets {
 
+    public final String FILE;
     public final String USERNAME;
     public final String PASSWORD;
 
     public ConfigSecrets(String fileName) throws ConfigsSetupException {
         if (fileName == null)
             throw new ConfigsSetupException("Config secrets file name cannot be null");
+
+        this.FILE = fileName;
 
         try {
             File infoFile = new File(fileName);
@@ -39,6 +42,7 @@ public class ConfigSecrets {
 
     // Constructor for testing
     public ConfigSecrets(String username, String password) {
+        this.FILE = null;
         this.USERNAME = username;
         this.PASSWORD = password;
     }

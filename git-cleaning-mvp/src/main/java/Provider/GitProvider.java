@@ -279,9 +279,14 @@ public class GitProvider implements IGitProvider {
         while (true) {
             try {
                 List<Ref> branches = git.branchList().call();
-                String trunkBranch = getRefName(branches.get(branches.size() - 1));
-                if (repo.getBranch().equals(branch.name()))
-                    git.checkout().setName(trunkBranch).call();
+                int i = 0;
+                while (repo.getBranch().equals(branch.name())) {
+                    git.checkout().setName(getRefName(branches.get(i++))).call();
+                    if (i > branches.size())
+                        throw new GitBranchDeletionException(
+                                String.format("Failed to delete branch %s because: Branch to be deleted is the " +
+                                        "only branch in the repo and checked out", branch.name()));
+                }
 
                 git.branchDelete().setBranchNames(branch.name()).setForce(true).call();
 

@@ -1,5 +1,6 @@
 package Business;
 
+import Application.ICustomLogger;
 import Business.Models.*;
 import Provider.IEmailProvider;
 
@@ -10,20 +11,24 @@ public class NotificationLogic implements INotificationLogic {
 
     private final IEmailProvider EMAIL_PROVIDER;
     private final List<RepoNotificationInfo> REPO_MAP;
+    private final ICustomLogger LOGGER;
 
-    public NotificationLogic(IEmailProvider emailProvider, List<RepoNotificationInfo> repoNotificationInfoList) {
+    public NotificationLogic(IEmailProvider emailProvider, List<RepoNotificationInfo> repoNotificationInfoList, ICustomLogger logger) {
         if (emailProvider == null)
             throw new IllegalArgumentException("Email provider cannot be null");
         if (repoNotificationInfoList == null)
             throw new IllegalArgumentException("Repo list cannot be null");
+        if (logger == null)
+            throw new IllegalArgumentException("Logger cannot be null");
 
         this.EMAIL_PROVIDER = emailProvider;
         this.REPO_MAP = repoNotificationInfoList;
+        this.LOGGER = logger;
     }
 
 
     @Override
-    public void sendNotificationPendingArchival(Branch branch, String repoId) throws SendEmailException {
+    public void sendNotificationPendingArchival(Branch branch, String repoId, int repoNum, int branchNum) throws SendEmailException {
         if (branch == null)
             throw new IllegalArgumentException("Branch cannot be null");
         if (repoId == null)
@@ -37,12 +42,15 @@ public class NotificationLogic implements INotificationLogic {
         String body = String.format("Branch '%s' will be archived in %d days. Commit to it again to prevent archival.",
                 branch.name(), info.takeActionCountsDays().notificationBeforeActionDays());
 
+        LOGGER.logBranchMsg(
+                String.format("Sending notification of pending archival to: %s", recipients), repoNum, branchNum);
+
         for (String r : recipients)
             EMAIL_PROVIDER.sendEmail(r, subject, body);
     }
 
     @Override
-    public void sendNotificationArchival(Branch branch, Tag tag, String repoId) throws SendEmailException {
+    public void sendNotificationArchival(Branch branch, Tag tag, String repoId, int repoNum, int branchNum) throws SendEmailException {
         if (branch == null)
             throw new IllegalArgumentException("Branch cannot be null");
         if (tag == null)
@@ -59,12 +67,15 @@ public class NotificationLogic implements INotificationLogic {
                 "Checkout the tag and recreate the branch to revive it.",
                 branch.name(), info.takeActionCountsDays().staleBranchInactivityDays(), tag.name());
 
+        LOGGER.logBranchMsg(
+                String.format("Sending notification of archival to: %s", recipients), repoNum, branchNum);
+
         for (String r : recipients)
             EMAIL_PROVIDER.sendEmail(r, subject, body);
     }
 
     @Override
-    public void sendNotificationPendingTagDeletion(Tag tag, String repoId) throws SendEmailException {
+    public void sendNotificationPendingTagDeletion(Tag tag, String repoId, int repoNum, int tagNum) throws SendEmailException {
         if (tag == null)
             throw new IllegalArgumentException("Tag cannot be null");
         if (repoId == null)
@@ -79,12 +90,15 @@ public class NotificationLogic implements INotificationLogic {
                 "Create a new tag or branch on archive tag or commits will be lost.",
                 tag.name(), info.takeActionCountsDays().notificationBeforeActionDays());
 
+        LOGGER.logTagMsg(
+                String.format("Sending notification of pending archive tag deletion to: %s", recipients), repoNum, tagNum);
+
         for (String r : recipients)
             EMAIL_PROVIDER.sendEmail(r, subject, body);
     }
 
     @Override
-    public void sendNotificationTagDeletion(Tag tag, String repoId) throws SendEmailException {
+    public void sendNotificationTagDeletion(Tag tag, String repoId, int repoNum, int tagNum) throws SendEmailException {
         if (tag == null)
             throw new IllegalArgumentException("Tag cannot be null");
         if (repoId == null)
@@ -98,6 +112,9 @@ public class NotificationLogic implements INotificationLogic {
         String body = String.format("Archive tag '%s' is %d days old and has been deleted," +
                 "commits no longer guaranteed to be accessible",
                 tag.name(), info.takeActionCountsDays().staleTagDays());
+
+        LOGGER.logTagMsg(
+                String.format("Sending notification of archive tag deletion to: %s", recipients), repoNum, tagNum);
 
         for (String r : recipients)
             EMAIL_PROVIDER.sendEmail(r, subject, body);

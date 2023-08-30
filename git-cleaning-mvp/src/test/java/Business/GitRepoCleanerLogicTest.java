@@ -121,10 +121,10 @@ public class GitRepoCleanerLogicTest {
 
         // assert
         try {
-            verify(logicSpy, times(1)).selectRepo(info1.repoDir(), info1.remoteUri());
-            verify(logicSpy, times(1)).cleanRepo(info1);
-            verify(logicSpy, times(1)).selectRepo(info2.repoDir(), info2.remoteUri());
-            verify(logicSpy, times(1)).cleanRepo(info2);
+            verify(logicSpy, times(1)).selectRepo(info1.repoDir(), info1.remoteUri(), 1);
+            verify(logicSpy, times(1)).cleanRepo(info1, 1);
+            verify(logicSpy, times(1)).selectRepo(info2.repoDir(), info2.remoteUri(), 2);
+            verify(logicSpy, times(1)).cleanRepo(info2, 2);
 
         } catch (GitCloningException | GitUpdateException | GitStartupException e) {
             throw new RuntimeException(e);
@@ -142,7 +142,7 @@ public class GitRepoCleanerLogicTest {
 
         try {
             // act
-            logic.selectRepo(info.repoDir(), info.remoteUri());
+            logic.selectRepo(info.repoDir(), info.remoteUri(), 1);
 
             // assert
             verify(mockGitProvider).cloneRepo(info.repoDir(), info.remoteUri());
@@ -166,7 +166,7 @@ public class GitRepoCleanerLogicTest {
 
         try {
             // act
-            logic.selectRepo(info.repoDir(), info.remoteUri());
+            logic.selectRepo(info.repoDir(), info.remoteUri(), 1);
 
             // assert
             verify(mockGitProvider, never()).cloneRepo(anyString(), anyString());
@@ -193,7 +193,7 @@ public class GitRepoCleanerLogicTest {
         }
 
         // act/assert
-        assertThrows(GitCloningException.class, () -> logic.selectRepo(info.repoDir(), info.remoteUri()));
+        assertThrows(GitCloningException.class, () -> logic.selectRepo(info.repoDir(), info.remoteUri(), 1));
     }
 
     @Test
@@ -212,7 +212,7 @@ public class GitRepoCleanerLogicTest {
         }
 
         // act/assert
-        assertThrows(GitStartupException.class, () -> logic.selectRepo(info.repoDir(), info.remoteUri()));
+        assertThrows(GitStartupException.class, () -> logic.selectRepo(info.repoDir(), info.remoteUri(), 1));
     }
 
     @Test
@@ -231,7 +231,7 @@ public class GitRepoCleanerLogicTest {
         }
 
         // act/assert
-        assertThrows(GitUpdateException.class, () -> logic.selectRepo(info.repoDir(), info.remoteUri()));
+        assertThrows(GitUpdateException.class, () -> logic.selectRepo(info.repoDir(), info.remoteUri(), 1));
     }
 
     @Test
@@ -250,7 +250,7 @@ public class GitRepoCleanerLogicTest {
         }
 
         // act
-        logic.cleanRepo(info);
+        logic.cleanRepo(info, 1);
 
         // assert
         verify(mockLogger, never()).log(Level.INFO, "Branch list successfully obtained");
@@ -272,7 +272,7 @@ public class GitRepoCleanerLogicTest {
         }
 
         // act
-        logic.cleanRepo(info);
+        logic.cleanRepo(info, 1);
 
         // assert
         verify(mockLogger, never()).log(Level.INFO, "Tag list successfully obtained");
@@ -297,10 +297,11 @@ public class GitRepoCleanerLogicTest {
         }
 
         // act
-        cleanerSpy.cleanRepo(info);
+        cleanerSpy.cleanRepo(info, 1);
 
         // assert
-        verify(cleanerSpy, times(1)).cleanBranches(branchList, info.repoId(), info.excludedBranches(), info.takeActionCountsDays());
+        verify(cleanerSpy, times(1)).cleanBranches(branchList,
+                info.repoId(), info.excludedBranches(), info.takeActionCountsDays(), 1);
     }
 
     @Test
@@ -322,10 +323,10 @@ public class GitRepoCleanerLogicTest {
         }
 
         // act
-        cleanerSpy.cleanRepo(info);
+        cleanerSpy.cleanRepo(info, 1);
 
         // assert
-        verify(cleanerSpy, times(1)).cleanTags(tagList, info.repoId(), info.takeActionCountsDays());
+        verify(cleanerSpy, times(1)).cleanTags(tagList, info.repoId(), info.takeActionCountsDays(), 1);
     }
 
     @Test
@@ -342,7 +343,7 @@ public class GitRepoCleanerLogicTest {
         GitRepoCleanerLogic logic = createDefaultTestLogic();
 
         // act
-        logic.archiveBranch(testBranch, info.repoId());
+        logic.archiveBranch(testBranch, info.repoId(), 1, 1);
 
         // assert
         try {
@@ -371,7 +372,7 @@ public class GitRepoCleanerLogicTest {
         }
 
         // act
-        logic.archiveBranch(testBranch, info.repoId());
+        logic.archiveBranch(testBranch, info.repoId(), 1, 1);
 
         // assert
         verify(mockLogger, never()).log(Level.INFO, "New archive tag " + testTag.name() + " successfully created");
@@ -399,7 +400,7 @@ public class GitRepoCleanerLogicTest {
         }
 
         // act
-        logic.archiveBranch(testBranch, info.repoId());
+        logic.archiveBranch(testBranch, info.repoId(), 1, 1);
 
         // assert
         verify(mockLogger, never()).log(Level.INFO, "Successfully deleted stale branch " + testBranch.name());
@@ -428,7 +429,7 @@ public class GitRepoCleanerLogicTest {
         }
 
         // act
-        logic.archiveBranch(testBranch, info.repoId());
+        logic.archiveBranch(testBranch, info.repoId(), 1, 1);
 
         // assert
         verify(mockLogger, never()).log(Level.INFO, "Successfully deleted stale branch " + testBranch.name());
@@ -455,7 +456,7 @@ public class GitRepoCleanerLogicTest {
         }
 
         // act
-        logic.archiveBranch(testBranch, info.repoId());
+        logic.archiveBranch(testBranch, info.repoId(), 1, 1);
 
         // assert
         verify(mockLogger, never()).log(Level.INFO, "Successfully deleted stale branch " + testBranch.name());
@@ -477,12 +478,16 @@ public class GitRepoCleanerLogicTest {
         GitRepoCleanerLogic logic = createDefaultTestLogic();
 
         // act
-        logic.archiveBranch(testBranch, info.repoId());
+        logic.archiveBranch(testBranch, info.repoId(), 1, 1);
 
         // assert
-        verify(mockLogger, times(1)).log(Level.INFO,
-                String.format("Stale branch '%s' successfully archived as '%s'",
-                        testBranch.name(), testTag.name()));
+        try {
+            verify(mockGitProvider, times(1)).createTag(testTag);
+            verify(mockGitProvider, times(1)).deleteBranch(testBranch);
+            verify(mockNotificationLogic, times(1)).sendNotificationArchival(testBranch, testTag, info.repoId(), 1, 1);
+        } catch (GitCreateTagException | GitBranchDeletionException | SendEmailException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test
@@ -500,12 +505,12 @@ public class GitRepoCleanerLogicTest {
 
         try {
             doThrow(new SendEmailException("error")).when(mockNotificationLogic).sendNotificationArchival(
-                    testBranch, testTag, info.repoId());
+                    testBranch, testTag, info.repoId(), 1, 1);
         } catch (SendEmailException ignored) {
         }
 
         // act
-        logic.archiveBranch(testBranch, info.repoId());
+        logic.archiveBranch(testBranch, info.repoId(), 1, 1);
 
         // assert
         verify(mockLogger, times(1)).log(Level.WARNING,
@@ -527,7 +532,8 @@ public class GitRepoCleanerLogicTest {
         GitRepoCleanerLogic logic = createDefaultTestLogic();
 
         // act
-        List<Branch> result = logic.cleanBranches(branches, info.repoId(), info.excludedBranches(), info.takeActionCountsDays());
+        List<Branch> result = logic.cleanBranches(branches,
+                info.repoId(), info.excludedBranches(), info.takeActionCountsDays(), 1);
 
         // assert
         assertIterableEquals(Collections.emptyList(), result);
@@ -548,7 +554,8 @@ public class GitRepoCleanerLogicTest {
         GitRepoCleanerLogic logic = createDefaultTestLogic();
 
         // act
-        List<Branch> result = logic.cleanBranches(branches, info.repoId(), info.excludedBranches(), info.takeActionCountsDays());
+        List<Branch> result = logic.cleanBranches(branches,
+                info.repoId(), info.excludedBranches(), info.takeActionCountsDays(), 1);
 
         // assert
         assertIterableEquals(Collections.emptyList(), result);
@@ -569,7 +576,8 @@ public class GitRepoCleanerLogicTest {
         GitRepoCleanerLogic logic = createDefaultTestLogic();
 
         // act
-        List<Branch> result = logic.cleanBranches(branches, info.repoId(), info.excludedBranches(), info.takeActionCountsDays());
+        List<Branch> result = logic.cleanBranches(branches,
+                info.repoId(), info.excludedBranches(), info.takeActionCountsDays(), 1);
 
         // assert
         assertIterableEquals(Collections.emptyList(), result);
@@ -593,10 +601,11 @@ public class GitRepoCleanerLogicTest {
         List<Branch> expected = Collections.singletonList(branches.get(1));
 
         // act
-        List<Branch> result = cleanerSpy.cleanBranches(branches, info.repoId(), info.excludedBranches(), info.takeActionCountsDays());
+        List<Branch> result = cleanerSpy.cleanBranches(branches,
+                info.repoId(), info.excludedBranches(), info.takeActionCountsDays(), 1);
 
         // assert
-        verify(cleanerSpy).archiveBranch(branches.get(1), info.repoId());
+        verify(cleanerSpy, times(1)).archiveBranch(branches.get(1), info.repoId(), 1, 2);
         assertIterableEquals(expected, result);
     }
 
@@ -614,11 +623,12 @@ public class GitRepoCleanerLogicTest {
         GitRepoCleanerLogic logic = createDefaultTestLogic();
 
         // act
-        List<Branch> result = logic.cleanBranches(branches, info.repoId(), info.excludedBranches(), info.takeActionCountsDays());
+        List<Branch> result = logic.cleanBranches(branches,
+                info.repoId(), info.excludedBranches(), info.takeActionCountsDays(), 1);
 
         // assert
         try {
-            verify(mockNotificationLogic, times(1)).sendNotificationPendingArchival(branches.get(0), info.repoId());
+            verify(mockNotificationLogic, times(1)).sendNotificationPendingArchival(branches.get(0), info.repoId(), 1, 1);
             assertIterableEquals(Collections.emptyList(), result);
         } catch (SendEmailException e) {
             throw new RuntimeException(e);
@@ -640,12 +650,13 @@ public class GitRepoCleanerLogicTest {
 
         try {
             doThrow(new SendEmailException("error")).when(mockNotificationLogic).sendNotificationPendingArchival(
-                    branches.get(0), info.repoId());
+                    branches.get(0), info.repoId(), 1, 1);
         } catch (SendEmailException ignored) {
         }
 
         // act
-        List<Branch> result = logic.cleanBranches(branches, info.repoId(), info.excludedBranches(), info.takeActionCountsDays());
+        List<Branch> result = logic.cleanBranches(branches,
+                info.repoId(), info.excludedBranches(), info.takeActionCountsDays(), 1);
 
         // assert
         verify(mockLogger, times(1)).log(Level.WARNING,
@@ -673,7 +684,7 @@ public class GitRepoCleanerLogicTest {
         }
 
         // act
-        logic.deleteArchiveTag(testTag, info.repoId());
+        logic.deleteArchiveTag(testTag, info.repoId(), 1, 1);
 
         // assert
         verify(mockLogger, times(1)).log(Level.WARNING,
@@ -693,11 +704,11 @@ public class GitRepoCleanerLogicTest {
         GitRepoCleanerLogic logic = createDefaultTestLogic();
 
         // act
-        logic.deleteArchiveTag(testTag, info.repoId());
+        logic.deleteArchiveTag(testTag, info.repoId(), 1, 1);
 
         // assert
         try {
-            verify(mockNotificationLogic, times(1)).sendNotificationTagDeletion(testTag, info.repoId());
+            verify(mockNotificationLogic, times(1)).sendNotificationTagDeletion(testTag, info.repoId(), 1, 1);
         } catch (SendEmailException e) {
             throw new RuntimeException(e);
         }
@@ -716,12 +727,12 @@ public class GitRepoCleanerLogicTest {
         GitRepoCleanerLogic logic = createDefaultTestLogic();
 
         try {
-            doThrow(new SendEmailException("error")).when(mockNotificationLogic).sendNotificationTagDeletion(testTag, info.repoId());
+            doThrow(new SendEmailException("error")).when(mockNotificationLogic).sendNotificationTagDeletion(testTag, info.repoId(), 1, 1);
         } catch (SendEmailException ignored) {
         }
 
         // act
-        logic.deleteArchiveTag(testTag, info.repoId());
+        logic.deleteArchiveTag(testTag, info.repoId(), 1, 1);
 
         // assert
         verify(mockLogger, times(1)).log(Level.WARNING,
@@ -743,7 +754,7 @@ public class GitRepoCleanerLogicTest {
         GitRepoCleanerLogic logic = createDefaultTestLogic();
 
         // act
-        List<Tag> result = logic.cleanTags(tags, info.repoId(), info.takeActionCountsDays());
+        List<Tag> result = logic.cleanTags(tags, info.repoId(), info.takeActionCountsDays(), 1);
 
         // assert
         assertIterableEquals(Collections.emptyList(), result);
@@ -764,7 +775,7 @@ public class GitRepoCleanerLogicTest {
         GitRepoCleanerLogic logic = createDefaultTestLogic();
 
         // act
-        List<Tag> result = logic.cleanTags(tags, info.repoId(), info.takeActionCountsDays());
+        List<Tag> result = logic.cleanTags(tags, info.repoId(), info.takeActionCountsDays(), 1);
 
         // assert
         assertIterableEquals(Collections.emptyList(), result);
@@ -785,7 +796,7 @@ public class GitRepoCleanerLogicTest {
         GitRepoCleanerLogic logic = createDefaultTestLogic();
 
         // act
-        List<Tag> result = logic.cleanTags(tags, info.repoId(), info.takeActionCountsDays());
+        List<Tag> result = logic.cleanTags(tags, info.repoId(), info.takeActionCountsDays(), 1);
 
         // assert
         assertIterableEquals(Collections.emptyList(), result);
@@ -809,10 +820,10 @@ public class GitRepoCleanerLogicTest {
         List<Tag> expected = Collections.singletonList(tags.get(1));
 
         // act
-        List<Tag> result = cleanerSpy.cleanTags(tags, info.repoId(), info.takeActionCountsDays());
+        List<Tag> result = cleanerSpy.cleanTags(tags, info.repoId(), info.takeActionCountsDays(), 1);
 
         // assert
-        verify(cleanerSpy).deleteArchiveTag(tags.get(1), info.repoId());
+        verify(cleanerSpy).deleteArchiveTag(tags.get(1), info.repoId(), 1, 2);
         assertIterableEquals(expected, result);
     }
 
@@ -830,11 +841,11 @@ public class GitRepoCleanerLogicTest {
         GitRepoCleanerLogic logic = createDefaultTestLogic();
 
         // act
-        List<Tag> result = logic.cleanTags(tags, info.repoId(), info.takeActionCountsDays());
+        List<Tag> result = logic.cleanTags(tags, info.repoId(), info.takeActionCountsDays(), 1);
 
         // assert
         try {
-            verify(mockNotificationLogic, times(1)).sendNotificationPendingTagDeletion(tags.get(0), info.repoId());
+            verify(mockNotificationLogic, times(1)).sendNotificationPendingTagDeletion(tags.get(0), info.repoId(), 1, 1);
             assertIterableEquals(Collections.emptyList(), result);
         } catch (SendEmailException e) {
             throw new RuntimeException(e);
@@ -856,12 +867,12 @@ public class GitRepoCleanerLogicTest {
 
         try {
             doThrow(new SendEmailException("error")).when(mockNotificationLogic).sendNotificationPendingTagDeletion(
-                    tags.get(0), info.repoId());
+                    tags.get(0), info.repoId(), 1, 1);
         } catch (SendEmailException ignored) {
         }
 
         // act
-        List<Tag> result = logic.cleanTags(tags, info.repoId(), info.takeActionCountsDays());
+        List<Tag> result = logic.cleanTags(tags, info.repoId(), info.takeActionCountsDays(), 1);
 
         // assert
         verify(mockLogger, times(1)).log(Level.WARNING,

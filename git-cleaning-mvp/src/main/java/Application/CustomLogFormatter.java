@@ -8,14 +8,14 @@ import java.util.logging.LogRecord;
 
 public class CustomLogFormatter extends Formatter {
 
-    private final DateFormat DATE_FORMAT = new SimpleDateFormat("hh:mm:ss.SS");
+    private final DateFormat DATE_FORMAT = new SimpleDateFormat("hh:mm:ss.SSS");
 
     @Override
     public String format(LogRecord record) {
         StringBuilder sb = new StringBuilder();
 
         sb.append("[").append(DATE_FORMAT.format(new Date(record.getMillis()))).append("]");
-        sb.append(" - ");
+        sb.append("-");
         sb.append("[").append(record.getLevel()).append("]");
         sb.append(" - ");
         sb.append(formatMessage(record));

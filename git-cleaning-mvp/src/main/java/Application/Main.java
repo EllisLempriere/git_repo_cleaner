@@ -67,7 +67,6 @@ public class Main {
             IGitProvider gitProvider = new GitProvider(configs.config_secrets(), configs.retries());
             IGitRepoCleanerLogic gitRepoCleanerLogic = new GitRepoCleanerLogic(repoCleaningInfoList,
                     gitProvider, notificationLogic, logger, executionTime);
-            logger.log(Level.INFO, "Finished bootstrapping");
 
             logger.log(Level.INFO, "Starting cleaning on " + configs.repos().size() + " repo(s)");
             gitRepoCleanerLogic.cleanRepos();

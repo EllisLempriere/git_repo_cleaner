@@ -1,8 +1,10 @@
-package Provider;
+package IntegrationTests.Provider;
 
 import Application.Models.ConfigSecrets;
 import Application.Models.ConfigsSetupException;
 import Business.Models.*;
+import Provider.GitNotSetupException;
+import Provider.GitProvider;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;

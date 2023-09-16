@@ -1,6 +1,8 @@
-package Business;
+package UnitTests.Business;
 
 import Application.ICustomLogger;
+import Business.GitRepoCleanerLogic;
+import Business.INotificationLogic;
 import Business.Models.*;
 import Provider.IGitProvider;
 import org.junit.jupiter.api.BeforeEach;

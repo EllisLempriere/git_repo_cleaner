@@ -1,7 +1,8 @@
-package Business;
+package UnitTests.Business;
 
 import Application.ICustomLogger;
 import Business.Models.*;
+import Business.NotificationLogic;
 import Provider.IEmailProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

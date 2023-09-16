@@ -1,5 +1,6 @@
-package Application;
+package UnitTests.Application;
 
+import Application.ConfigGetter;
 import Application.Models.ConfigSecrets;
 import Application.Models.Configs;
 import Application.Models.ConfigsSetupException;

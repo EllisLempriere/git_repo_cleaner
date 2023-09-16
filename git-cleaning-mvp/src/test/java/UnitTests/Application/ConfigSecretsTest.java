@@ -1,4 +1,4 @@
-package Application;
+package UnitTests.Application;
 
 import Application.Models.ConfigSecrets;
 import Application.Models.ConfigsSetupException;

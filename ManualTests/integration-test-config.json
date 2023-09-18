@@ -1,0 +1,25 @@
+{
+    "retries": 3,
+    "config_secrets": "C:\\Users\\ellis\\Documents\\repos\\secrets.properties",
+
+    "repos": [
+        {
+            "directory": "C:\\Users\\ellis\\Documents\\repos\\test-repo-1",
+            "remote_uri": "https://gitlab.com/EllisLempriere/test-int-test-repo1-fork.git",
+            "excluded_branches": ["main"],
+            "stale_branch_inactivity_days": 60,
+            "stale_tag_days": 30,
+            "notification_before_action_days": 7,
+            "recipients": []
+        },
+        {
+            "directory": "C:\\Users\\ellis\\Documents\\repos\\test-repo-2",
+            "remote_uri": "https://gitlab.com/EllisLempriere/test-int-test-repo2-fork.git",
+            "excluded_branches": ["main", "exclude"],
+            "stale_branch_inactivity_days": 60,
+            "stale_tag_days": 30,
+            "notification_before_action_days": 7,
+            "recipients": ["tim@mail"]
+        }
+    ]
+}

@@ -370,17 +370,16 @@ public class GitRepoCleanerLogicTest {
 
         try {
             doThrow(new GitCreateTagException("error")).when(mockGitProvider).createTag(testTag);
-        } catch (GitCreateTagException ignored) {
+
+            // act
+            logic.archiveBranch(testBranch, info.repoId(), 1, 1);
+
+            // assert
+            verify(mockGitProvider, never()).deleteBranch(testBranch);
+
+        } catch (GitCreateTagException | GitBranchDeletionException e) {
+            throw new RuntimeException(e);
         }
-
-        // act
-        logic.archiveBranch(testBranch, info.repoId(), 1, 1);
-
-        // assert
-        verify(mockLogger, never()).log(Level.INFO, "New archive tag " + testTag.name() + " successfully created");
-        verify(mockLogger, times(1)).log(Level.WARNING,
-                String.format("Failed to create archive tag '%s', branch '%s' not archived",
-                        testTag.name(), testBranch.name()));
     }
 
     @Test
@@ -388,7 +387,6 @@ public class GitRepoCleanerLogicTest {
     void archiveBranchTest3() {
         // arrange
         Branch testBranch = new Branch("branch", Collections.emptyList());
-        Tag testTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
 
         RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
@@ -405,10 +403,7 @@ public class GitRepoCleanerLogicTest {
         logic.archiveBranch(testBranch, info.repoId(), 1, 1);
 
         // assert
-        verify(mockLogger, never()).log(Level.INFO, "Successfully deleted stale branch " + testBranch.name());
-        verify(mockLogger, times(1)).log(Level.WARNING,
-                String.format("Failed to delete stale branch '%s', branch not archived, removing archive tag '%s'",
-                        testBranch.name(), testTag.name()));
+        verify(mockLogger, times(1)).logBranchWarn(anyString(), anyInt(), anyInt());
     }
 
     @Test
@@ -434,9 +429,7 @@ public class GitRepoCleanerLogicTest {
         logic.archiveBranch(testBranch, info.repoId(), 1, 1);
 
         // assert
-        verify(mockLogger, never()).log(Level.INFO, "Successfully deleted stale branch " + testBranch.name());
-        verify(mockLogger, times(1)).log(Level.WARNING,
-                String.format("Failed to delete archive tag '%s', tag is extraneous", testTag.name()));
+        verify(mockLogger, times(2)).logBranchWarn(anyString(), anyInt(), anyInt());
     }
 
     @Test
@@ -454,16 +447,16 @@ public class GitRepoCleanerLogicTest {
 
         try {
             doThrow(new GitBranchDeletionException("error")).when(mockGitProvider).deleteBranch(testBranch);
-        } catch (GitBranchDeletionException ignored) {
+
+            // act
+            logic.archiveBranch(testBranch, info.repoId(), 1, 1);
+
+            // assert
+            verify(mockGitProvider, times(1)).deleteTag(testTag);
+
+        } catch (GitTagDeletionException | GitBranchDeletionException e) {
+            throw new RuntimeException(e);
         }
-
-        // act
-        logic.archiveBranch(testBranch, info.repoId(), 1, 1);
-
-        // assert
-        verify(mockLogger, never()).log(Level.INFO, "Successfully deleted stale branch " + testBranch.name());
-        verify(mockLogger, times(1)).log(Level.WARNING,
-                String.format("Archive tag '%s' successfully removed", testTag.name()));
     }
 
     @Test
@@ -515,9 +508,9 @@ public class GitRepoCleanerLogicTest {
         logic.archiveBranch(testBranch, info.repoId(), 1, 1);
 
         // assert
-        verify(mockLogger, times(1)).log(Level.WARNING,
+        verify(mockLogger, times(1)).logBranchWarn(
                 String.format("Failed to notify of archival of branch '%s'",
-                        testBranch.name()));
+                testBranch.name()), 1, 1);
     }
 
 
@@ -661,9 +654,9 @@ public class GitRepoCleanerLogicTest {
                 info.repoId(), info.excludedBranches(), info.takeActionCountsDays(), 1);
 
         // assert
-        verify(mockLogger, times(1)).log(Level.WARNING,
+        verify(mockLogger, times(1)).logBranchWarn(
                 String.format("Failed to notify of pending archival of branch '%s'",
-                        branches.get(0).name()));
+                branches.get(0).name()), 1, 1);
         assertIterableEquals(Collections.emptyList(), result);
     }
 
@@ -689,8 +682,7 @@ public class GitRepoCleanerLogicTest {
         logic.deleteArchiveTag(testTag, info.repoId(), 1, 1);
 
         // assert
-        verify(mockLogger, times(1)).log(Level.WARNING,
-                String.format("Unable to delete archive tag '%s'", testTag.name()));
+        verify(mockLogger, times(1)).logTagWarn(anyString(), anyInt(), anyInt());
     }
 
     @Test
@@ -737,9 +729,9 @@ public class GitRepoCleanerLogicTest {
         logic.deleteArchiveTag(testTag, info.repoId(), 1, 1);
 
         // assert
-        verify(mockLogger, times(1)).log(Level.WARNING,
-                String.format("Failed to notify of deletion of archive tag '%s'",
-                testTag.name()));
+        verify(mockLogger, times(1)).logTagWarn(
+                String.format("Failed to notify of deletion of tag '%s'",
+                testTag.name()), 1, 1);
     }
 
 
@@ -877,9 +869,9 @@ public class GitRepoCleanerLogicTest {
         List<Tag> result = logic.cleanTags(tags, info.repoId(), info.takeActionCountsDays(), 1);
 
         // assert
-        verify(mockLogger, times(1)).log(Level.WARNING,
-                String.format("Failed to notify of pending deletion of archive tag '%s'",
-                        tags.get(0).name()));
+        verify(mockLogger, times(1)).logTagWarn(
+                String.format("Failed to notify of pending deletion of tag '%s'",
+                tags.get(0).name()), 1, 1);
         assertIterableEquals(Collections.emptyList(), result);
     }
 }

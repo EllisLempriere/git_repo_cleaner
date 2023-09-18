@@ -23,5 +23,9 @@ RepoCleaningInfo naming
 (See cleanReposTest1 for reformatting)
 Bug where local branch not deleted, but remote branch is - will be solved with refactoring of business logic to only use remote refs
 
+APPLICATION CONCERNS
+Make ConfigGetter search for config file instead of providing direct path
+
 OTHER CONCERNS
 Packaging for release
+Any code that refers to a specific file path needs to be generalized

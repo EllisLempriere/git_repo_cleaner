@@ -26,7 +26,7 @@ public class ConfigGetter {
         try {
             configs = mapper.readValue(new File(configFileName), new TypeReference<>() {});
         } catch (IOException e) {
-            throw new ConfigsSetupException("Failed to read config from file", e);
+            throw new ConfigsSetupException("Failed to read config from file: " + e.getMessage(), e);
         }
 
         if (configs.retries() == null)

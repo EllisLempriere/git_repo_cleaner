@@ -8,10 +8,12 @@ import Application.Models.RepoConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -46,8 +48,8 @@ public class ConfigGetterTest {
     void getConfigTest2() {
         try {
             // arrange
-            ConfigGetter getter = new ConfigGetter("C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner" +
-                    "\\git-cleaning-mvp\\src\\test\\resources\\Application\\valid-test-config.json");
+            String filePath = getFilePath("valid-test-config.json");
+            ConfigGetter getter = new ConfigGetter(filePath);
 
             ConfigSecrets expectedSecrets = new ConfigSecrets("user", "pass");
             List<RepoConfig> expectedRepoConfigs = buildTestRepoConfigs();
@@ -69,8 +71,8 @@ public class ConfigGetterTest {
     void getConfigTest3() {
         try {
             // arrange
-            ConfigGetter getter = new ConfigGetter("C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner" +
-                    "\\git-cleaning-mvp\\src\\test\\resources\\Application\\missing-retries-test-config.json");
+            String filePath = getFilePath("missing-retries-test-config.json");
+            ConfigGetter getter = new ConfigGetter(filePath);
 
             // act/assert
             assertThrows(ConfigsSetupException.class, getter::getConfigs);
@@ -85,8 +87,8 @@ public class ConfigGetterTest {
     void getConfigTest4() {
         try {
             // arrange
-            ConfigGetter getter = new ConfigGetter("C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner" +
-                    "\\git-cleaning-mvp\\src\\test\\resources\\Application\\empty-test-config.json");
+            String filePath = getFilePath("empty-test-config.json");
+            ConfigGetter getter = new ConfigGetter(filePath);
 
             // act/assert
             assertThrows(ConfigsSetupException.class, getter::getConfigs);
@@ -101,8 +103,8 @@ public class ConfigGetterTest {
     void getConfigTest5() {
         try {
             // arrange
-            ConfigGetter getter = new ConfigGetter("C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner" +
-                    "\\git-cleaning-mvp\\src\\test\\resources\\Application\\missing-config-secrets-test-config.json");
+            String filePath = getFilePath("missing-config-secrets-test-config.json");
+            ConfigGetter getter = new ConfigGetter(filePath);
 
             // act/assert
             assertThrows(ConfigsSetupException.class, getter::getConfigs);
@@ -117,8 +119,8 @@ public class ConfigGetterTest {
     void getConfigTest6() {
         try {
             // arrange
-            ConfigGetter getter = new ConfigGetter("C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner" +
-                    "\\git-cleaning-mvp\\src\\test\\resources\\Application\\missing-repos-test-config.json");
+            String filePath = getFilePath("missing-repos-test-config.json");
+            ConfigGetter getter = new ConfigGetter(filePath);
 
             // act/assert
             assertThrows(ConfigsSetupException.class, getter::getConfigs);
@@ -133,8 +135,8 @@ public class ConfigGetterTest {
     void getConfigTest7() {
         try {
             // arrange
-            ConfigGetter getter = new ConfigGetter("C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner" +
-                    "\\git-cleaning-mvp\\src\\test\\resources\\Application\\empty-repos-test-config.json");
+            String filePath = getFilePath("empty-repos-test-config.json");
+            ConfigGetter getter = new ConfigGetter(filePath);
 
             // act
             Configs configs = getter.getConfigs();
@@ -172,5 +174,15 @@ public class ConfigGetterTest {
                 staleTagDays2, notificationBeforeActionDays2, recipients2));
 
         return expectedRepoConfigs;
+    }
+
+    private String getFilePath(String fileName) {
+        try (Stream<Path> paths = Files.find(Paths.get("src"), 50,
+                (p, attr) -> p.getFileName().toString().matches(fileName))) {
+
+            return paths.toList().get(0).toAbsolutePath().toString();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

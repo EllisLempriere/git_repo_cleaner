@@ -1,6 +1,6 @@
 {
   "retries": 3,
-  "config_secrets": "secrets.properties",
+  "config_secrets": "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner\\git-cleaning-mvp\\src\\test\\resources\\Application\\valid-test-secrets.properties",
 
   "repos": []
 }

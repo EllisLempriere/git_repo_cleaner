@@ -1,3 +1,4 @@
+TESTING CONCERNS
 Leave test artifacts/results in place for inspection after test run (use seperate folder)
 Don't edit artifact master copies - eliminate the need to reset master copy of repo
 Name constants (local repo dir, remote uri)
@@ -7,6 +8,7 @@ Better test naming
 repoEqual -> repoWithSameTagsAndBranches
 Make integration tests runable by another user
 
+PROVIDER CONCERNS
 Edit provider API to deal with more specific objects (not just business objects)
 Take a look at updateRepo
 	Should not handle setup
@@ -16,7 +18,10 @@ GitProvider implementing AutoClosable
 Make provider directly handle remote refs
 Move retries to be a business layer concern
 
+BUSINESS LOGIC CONCERNS
 RepoCleaningInfo naming
 (See cleanReposTest1 for reformatting)
+Bug where local branch not deleted, but remote branch is - will be solved with refactoring of business logic to only use remote refs
 
+OTHER CONCERNS
 Packaging for release

@@ -1,7 +1,8 @@
 # Manual Test Cases
 
-The following are test cases to be executed manually using git shell and the associted ManualMaintenanceInstructions.md
+Companion file to ManualMaintenanceInstructions.md - Outlines the creation of test repos to ensure correct business logic
 
+The following are test cases to be executed manually using git shell and the associted ManualMaintenanceInstructions.md
 
 
 ## Test Case 1 - New Repo
@@ -18,16 +19,16 @@ Create remote repo on GitLab named "test-case-1"
 
 Execute the following in a bash shell:
 ```
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 mkdir test-case-1
 cd test-case-1
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-1.git
+git remote add origin https://gitlab.com/~/test-case-1.git
 ```
 
 Confirm output like:
 ```
-Initialized empty Git repository in .../repos/test-case-1/.git/
+Initialized empty Git repository in ~/repos/test-case-1/.git/
 ```
 
 ### Act
@@ -49,7 +50,7 @@ Confirm that:
 - Once the remote repo has been created in GitLab it should not need to be reset as the repo should always stay in the "new" state
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -r test-case-1
     ```
 - When re-running the test case, if the remote repo still exists, just do confirmation in the arrange section
@@ -70,11 +71,11 @@ Create remote repo on GitLab named "test-case-2"
 
 Execute the following in a bash shell:
 ```
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 mkdir test-case-2
 cd test-case-2
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-2.git
+git remote add origin https://gitlab.com/~e/test-case-2.git
 echo "hello" > foo.txt
 git add foo.txt
 export GIT_AUTHOR_DATE="2023-04-02 11:00:00"
@@ -96,8 +97,8 @@ git log --graph --abbrev-commit --decorate --format=format:"%h - (%cs) %s - %an 
 ```
 Confirm output shows both branches on local and remote, pointing to the commit "I am a stale main":
 ```
-* ... - (2023-04-02) I am a stale main - Ellis Lempriere  (HEAD -> a1, origin/main, origin/a1, main)
-* ... - (2023-04-02) initial commit - Ellis Lempriere
+* ~ - (2023-04-02) I am a stale main - ~  (HEAD -> a1, origin/main, origin/a1, main)
+* ~ - (2023-04-02) initial commit - ~
 ```
 
 ### Act
@@ -111,15 +112,15 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-04-02) I am a stale main - Ellis Lempriere  (HEAD -> main, tag: zArchiveBranch_20230601_a1, origin/main)
-        * ... - (2023-04-02) initial commit - Ellis Lempriere
+        * ~ - (2023-04-02) I am a stale main - ~  (HEAD -> main, tag: zArchiveBranch_20230601_a1, origin/main)
+        * ~ - (2023-04-02) initial commit - ~
         ```
-- Notification of archival of branch "a1" as "zArchiveBranch_20230601_a1" sent to Ellis Lempriere
+- Notification of archival of branch "a1" as "zArchiveBranch_20230601_a1" sent to ~
 
 ### Test Case Reset Instructions
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-2
     ```
 - Delete remote repo on GitLab
@@ -140,11 +141,11 @@ Create remote repo on GitLab named "test-case-3"
 
 Execute the following in a bash shell:
 ```
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 mkdir test-case-3
 cd test-case-3
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-3.git
+git remote add origin https://gitlab.com/~/test-case-3.git
 echo "hello" > foo.txt
 git add foo.txt
 export GIT_AUTHOR_DATE="2023-01-01 11:00:00"
@@ -166,8 +167,8 @@ git log --graph --abbrev-commit --decorate --format=format:"%h - (%cs) %s - %an 
 ```
 Confirm output shows both branches on local and remote, "main" pointing to the commit "I am a stale main" and "a1" pointing to the commit "I am the stale excluded branch a1":
 ```
-* ... - (2023-01-01) I am the stale excluded branch a1 - Ellis Lempriere  (HEAD -> a1, origin/a1)
-* ... - (2023-01-01) I am a stale main - Ellis Lempriere  (origin/main, main)
+* ~ - (2023-01-01) I am the stale excluded branch a1 - ~  (HEAD -> a1, origin/a1)
+* ~ - (2023-01-01) I am a stale main - ~  (origin/main, main)
 ```
 
 ### Act
@@ -182,15 +183,15 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-01-01) I am the stale excluded branch a1 - Ellis Lempriere  (HEAD -> a1, origin/a1)
-        * ... - (2023-01-01) I am a stale main - Ellis Lempriere  (origin/main, main)
+        * ~ - (2023-01-01) I am the stale excluded branch a1 - ~  (HEAD -> a1, origin/a1)
+        * ~ - (2023-01-01) I am a stale main - ~  (origin/main, main)
         ```
 - No notifications were sent
 
 ### Test Case Reset Instructions
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-3
     ```
 - Delete remote repo on GitLab
@@ -211,16 +212,16 @@ Create remote repo on GitLab named "test-case-4"
 
 Execute the following in a bash shell:
 ```
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 mkdir test-case-4
 cd test-case-4
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-4.git
-echo "hello Ellis" > foo.txt
+git remote add origin https://gitlab.com/~/test-case-4.git
+echo "hello ~" > foo.txt
 git add foo.txt
 export GIT_AUTHOR_DATE="2023-04-09 11:00:00"
 export GIT_COMMITTER_DATE=$GIT_AUTHOR_DATE
-git commit -m "ellis commited me to main"
+git commit -m "~ commited me to main"
 git push -u origin main
 git checkout -b a1
 echo "hello John" >> foo.txt
@@ -235,10 +236,10 @@ Run:
 ```
 git log --graph --abbrev-commit --decorate --format=format:"%h - (%cs) %s - %an %d" --all
 ```
-Confirm output shows both branches on local and remote, "main" pointing to the commit "ellis committed me to main" and "a1" pointing to the commit "I need to notify my dev about pending archival":
+Confirm output shows both branches on local and remote, "main" pointing to the commit "~ committed me to main" and "a1" pointing to the commit "I need to notify my dev about pending archival":
 ```
-* ... - (2023-04-09) I need to notify my dev about pending archival - John Doe  (HEAD -> a1, origin/a1)
-* ... - (2023-04-09) ellis commited me to main - Ellis Lempriere  (origin/main, main)
+* ~ - (2023-04-09) I need to notify my dev about pending archival - John Doe  (HEAD -> a1, origin/a1)
+* ~ - (2023-04-09) ~ commited me to main - ~  (origin/main, main)
 ```
 
 ### Act
@@ -252,15 +253,15 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-04-09) I need to notify my dev about pending archival - John Doe  (HEAD -> a1, origin/a1)
-        * ... - (2023-04-09) ellis commited me to main - Ellis Lempriere  (origin/main, main)
+        * ~ - (2023-04-09) I need to notify my dev about pending archival - John Doe  (HEAD -> a1, origin/a1)
+        * ~ - (2023-04-09) ~ commited me to main - ~  (origin/main, main)
         ```
 - Notification of pending archival of branch "a1" sent to John Doe
 
 ### Test Case Reset Instructions
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-4
     ```
 - Delete remote repo on GitLab
@@ -281,16 +282,16 @@ Create remote repo on GitLab named "test-case-5"
 
 Execute the following in a bash shell:
 ```
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 mkdir test-case-5
 cd test-case-5
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-5.git
-echo "hello Ellis" > foo.txt
+git remote add origin https://gitlab.com/~/test-case-5.git
+echo "hello ~" > foo.txt
 git add foo.txt
 export GIT_AUTHOR_DATE="2023-04-02 11:00:00"
 export GIT_COMMITTER_DATE=$GIT_AUTHOR_DATE
-git commit -m "ellis commited me to main"
+git commit -m "~ commited me to main"
 git push -u origin main
 git checkout -b a1
 echo "hello John" >> foo.txt
@@ -305,10 +306,10 @@ Run:
 ```
 git log --graph --abbrev-commit --decorate --format=format:"%h - (%cs) %s - %an %d" --all
 ```
-Confirm output shows both branches on local and remote, "main" pointing to the commit "ellis committed me to main" and "a1" pointing to the commit "I need to be archived":
+Confirm output shows both branches on local and remote, "main" pointing to the commit "~ committed me to main" and "a1" pointing to the commit "I need to be archived":
 ```
-* ... - (2023-04-02) I need to be archived - John Doe  (HEAD -> a1, origin/a1)
-* ... - (2023-04-02) ellis commited me to main - Ellis Lempriere  (origin/main, main)
+* ~ - (2023-04-02) I need to be archived - John Doe  (HEAD -> a1, origin/a1)
+* ~ - (2023-04-02) ~ commited me to main - ~  (origin/main, main)
 ```
 
 ### Act
@@ -322,15 +323,15 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-04-02) I need to be archived - John Doe  (tag: zArchiveBranch_20230601_a1)
-        * ... - (2023-04-02) ellis commited me to main - Ellis Lempriere  (HEAD -> main, origin/main)
+        * ~ - (2023-04-02) I need to be archived - John Doe  (tag: zArchiveBranch_20230601_a1)
+        * ~ - (2023-04-02) ~ commited me to main - ~  (HEAD -> main, origin/main)
         ```
 - Notification of archival of branch "a1" sent to John Doe
 
 ### Test Case Reset Instructions
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-5
     ```
 - Delete remote repo on GitLab
@@ -351,16 +352,16 @@ Create remote repo on GitLab named "test-case-6"
 
 Execute the following in a bash shell:
 ```
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 mkdir test-case-6
 cd test-case-6
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-6.git
-echo "hello Ellis" > foo.txt
+git remote add origin https://gitlab.com/~/test-case-6.git
+echo "hello ~" > foo.txt
 git add foo.txt
 export GIT_AUTHOR_DATE="2023-03-10 11:00:00"
 export GIT_COMMITTER_DATE=$GIT_AUTHOR_DATE
-git commit -m "ellis commited me to main"
+git commit -m "~ commited me to main"
 git push -u origin main
 git checkout -b a1
 echo "hello John" >> foo.txt
@@ -380,10 +381,10 @@ Run:
 ```
 git log --graph --abbrev-commit --decorate --format=format:"%h - (%cs) %s - %an %d" --all
 ```
-Confirm output shows "main" on local and remote pointing to the commit "ellis committed me to main" and the archive tag "zArchiveBranch_20230509_a1" pointing to the commit "I need to notify my dev of pending archive tag deletion":
+Confirm output shows "main" on local and remote pointing to the commit "~ committed me to main" and the archive tag "zArchiveBranch_20230509_a1" pointing to the commit "I need to notify my dev of pending archive tag deletion":
 ```
-* ... - (2023-03-10) I need to notify my dev of pending archive tag deletion - John Doe  (tag: zArchiveBranch_20230509_a1)
-* ... - (2023-03-10) ellis commited me to main - Ellis Lempriere  (HEAD -> main, origin/main)
+* ~ - (2023-03-10) I need to notify my dev of pending archive tag deletion - John Doe  (tag: zArchiveBranch_20230509_a1)
+* ~ - (2023-03-10) ellis commited me to main - ~  (HEAD -> main, origin/main)
 ```
 
 ### Act
@@ -397,15 +398,15 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-03-10) I need to notify my dev of pending archive tag deletion - John Doe  (tag: zArchiveBranch_20230509_a1)
-        * ... - (2023-03-10) ellis commited me to main - Ellis Lempriere  (HEAD -> main, origin/main)
+        * ~ - (2023-03-10) I need to notify my dev of pending archive tag deletion - John Doe  (tag: zArchiveBranch_20230509_a1)
+        * ~ - (2023-03-10) ~ commited me to main - ~  (HEAD -> main, origin/main)
         ```
 - Notification of pending deletetion of archive tag "zArchiveBranch_20230509_a1" sent to John Doe
 
 ### Test Case Reset Instructions
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-6
     ```
 - Delete remote repo on GitLab
@@ -426,16 +427,16 @@ Create remote repo on GitLab named "test-case-7"
 
 Execute the following in a bash shell:
 ```
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 mkdir test-case-7
 cd test-case-7
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-7.git
-echo "hello Ellis" > foo.txt
+git remote add origin https://gitlab.com/~/test-case-7.git
+echo "hello ~" > foo.txt
 git add foo.txt
 export GIT_AUTHOR_DATE="2023-03-03 11:00:00"
 export GIT_COMMITTER_DATE=$GIT_AUTHOR_DATE
-git commit -m "ellis commited me to main"
+git commit -m "~ commited me to main"
 git push -u origin main
 git checkout -b a1
 echo "hello John" >> foo.txt
@@ -457,8 +458,8 @@ git log --graph --abbrev-commit --decorate --format=format:"%h - (%cs) %s - %an 
 ```
 Confirm output shows the archive tag "zArchiveBranch_20230502_a1" one commit ahead of "main":
 ```
-* ... - (2023-03-03) I need to be deleted - John Doe  (tag: zArchiveBranch_20230502_a1)
-* ... - (2023-03-03) ellis commited me to main - Ellis Lempriere  (HEAD -> main, origin/main)
+* ~ - (2023-03-03) I need to be deleted - John Doe  (tag: zArchiveBranch_20230502_a1)
+* ~ - (2023-03-03) ellis commited me to main - ~  (HEAD -> main, origin/main)
 ```
 
 ### Act
@@ -472,14 +473,14 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-03-03) ellis commited me to main - Ellis Lempriere  (HEAD -> main, origin/main)
+        * ~ - (2023-03-03) ellis commited me to main - ~  (HEAD -> main, origin/main)
         ```
 - Notification of deletetion of archive tag "zArchiveBranch_20230502_a1" sent to John Doe
 
 ### Test Case Reset Instructions
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-7
     ```
 - Delete remote repo on GitLab
@@ -500,11 +501,11 @@ Create remote repo on GitLab named "test-case-8"
 
 Execute the following in a bash shell:
 ```
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 mkdir test-case-8
 cd test-case-8
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-8.git
+git remote add origin https://gitlab.com/~/test-case-8.git
 echo "hello" > foo.txt
 git add foo.txt
 export GIT_AUTHOR_DATE="2023-03-03 11:00:00"
@@ -539,9 +540,9 @@ git log --graph --abbrev-commit --decorate --format=format:"%h - (%cs) %s - %an 
 ```
 Confirm the output shows "main" pointing to "initial commit" on both remote and local, the archive tag "zArchiveBranch_20230502_a1" pointing to "I will be archived and revived" on local and remote, and branch "a1" pointing to "I am reviving the branch" on local and remote:
 ```
-* ... - (2023-05-27) I am revivng the branch - Ellis Lempriere  (HEAD -> a1, origin/a1)
-* ... - (2023-03-03) I will be archived and revived - Ellis Lempriere  (tag: zArchiveBranch_20230502_a1)
-* ... - (2023-03-03) inital commit - Ellis Lempriere  (origin/main, main)
+* ~ - (2023-05-27) I am revivng the branch - ~  (HEAD -> a1, origin/a1)
+* ~ - (2023-03-03) I will be archived and revived - ~  (tag: zArchiveBranch_20230502_a1)
+* ~ - (2023-03-03) inital commit - ~  (origin/main, main)
 ```
 
 ### Act
@@ -555,16 +556,16 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-05-27) I am revivng the branch - Ellis Lempriere  (HEAD -> a1, origin/a1)
-        * ... - (2023-03-03) I will be archived and revived - Ellis Lempriere
-        * ... - (2023-03-03) inital commit - Ellis Lempriere  (origin/main, main)
+        * ~ - (2023-05-27) I am revivng the branch - ~  (HEAD -> a1, origin/a1)
+        * ~ - (2023-03-03) I will be archived and revived - ~
+        * ~ - (2023-03-03) inital commit - ~  (origin/main, main)
         ```
-- Notification of deletetion of archive tag "zArchiveBranch_20230502_a1" sent to Ellis Lempriere
+- Notification of deletetion of archive tag "zArchiveBranch_20230502_a1" sent to ~
 
 ### Test Case Reset Instructions
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-8
     ```
 - Delete remote repo on GitLab
@@ -585,11 +586,11 @@ Create remote repo on GitLab named "test-case-9"
 
 Execute the following in a bash shell:
 ```
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 mkdir test-case-9
 cd test-case-9
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-9.git
+git remote add origin https://gitlab.com/~/test-case-9.git
 echo "hello" > foo.txt
 git add foo.txt
 export GIT_AUTHOR_DATE="2023-03-29 11:00:00"
@@ -624,9 +625,9 @@ git log --graph --abbrev-commit --decorate --format=format:"%h - (%cs) %s - %an 
 ```
 Confirm output shows the archive tag "zArchiveBranch_20230428_a1" one commit ahead of "main" and one commit behind the new "a1" on both remote and local:
 ```
-* b38ebe5 - (2023-05-02) I am revivng the branch and will be archived - Ellis Lempriere  (HEAD -> a1, origin/a1)
-* 53e6d0b - (2023-03-29) I will be archived - Ellis Lempriere  (tag: zArchiveBranch_20230428_a1)
-* bf18805 - (2023-03-29) inital commit - Ellis Lempriere  (origin/main, main)
+* ~ - (2023-05-02) I am revivng the branch and will be archived - ~  (HEAD -> a1, origin/a1)
+* ~ - (2023-03-29) I will be archived - ~  (tag: zArchiveBranch_20230428_a1)
+* ~ - (2023-03-29) inital commit - ~  (origin/main, main)
 ```
 
 ### Act
@@ -641,16 +642,16 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-05-02) I am revivng the branch and will be archived - Ellis Lempriere  (tag: zArchiveBranch_20230601_a1)
-        * ... - (2023-03-29) I will be archived - Ellis Lempriere  (tag: zArchiveBranch_20230428_a1)
-        * ... - (2023-03-29) inital commit - Ellis Lempriere  (HEAD -> main, origin/main)
+        * ~ - (2023-05-02) I am revivng the branch and will be archived - ~  (tag: zArchiveBranch_20230601_a1)
+        * ~ - (2023-03-29) I will be archived - ~  (tag: zArchiveBranch_20230428_a1)
+        * ~ - (2023-03-29) inital commit - ~  (HEAD -> main, origin/main)
         ```
-- Notification archival of branch "a1" as "zArchiveBranch_20230601_a1" sent to Ellis Lempriere
+- Notification archival of branch "a1" as "zArchiveBranch_20230601_a1" sent to ~
 
 ### Test Case Reset Instructions
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-9
     ```
 - Delete remote repo on GitLab
@@ -671,11 +672,11 @@ Create remote repo on GitLab named "test-case-10"
 
 Execute the following in a bash shell:
 ```
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 mkdir test-case-10
 cd test-case-10
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-10.git
+git remote add origin https://gitlab.com/~/test-case-10.git
 echo "hello" > foo.txt
 git add foo.txt
 export GIT_AUTHOR_DATE="2023-04-02 11:00:00"
@@ -706,9 +707,9 @@ git log --graph --abbrev-commit --decorate --format=format:"%h - (%cs) %s - %an 
 ```
 Confirm output shows the branch "a1" one commit ahead of "main" both locally and on remote:
 ```
-* ... - (2023-06-01) I will be rebased - Ellis Lempriere  (HEAD -> a1, origin/a1)
-* ... - (2023-06-01) I will be rebased onto - Ellis Lempriere  (origin/main, main)
-* ... - (2023-04-02) inital commit - Ellis Lempriere
+* ~ - (2023-06-01) I will be rebased - ~  (HEAD -> a1, origin/a1)
+* ~ - (2023-06-01) I will be rebased onto - ~  (origin/main, main)
+* ~ - (2023-04-02) inital commit - ~
 ```
 
 ### Act
@@ -722,16 +723,16 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-06-01) I will be rebased - Ellis Lempriere  (HEAD -> a1, origin/a1)
-        * ... - (2023-06-01) I will be rebased onto - Ellis Lempriere  (origin/main, main)
-        * ... - (2023-04-02) inital commit - Ellis Lempriere
+        * ~ - (2023-06-01) I will be rebased - ~  (HEAD -> a1, origin/a1)
+        * ~ - (2023-06-01) I will be rebased onto - ~  (origin/main, main)
+        * ~ - (2023-04-02) inital commit - ~
         ```
 - No notifications were sent
 
 ### Test Case Reset Instructions
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-10
     ```
 - Delete remote repo on GitLab
@@ -752,11 +753,11 @@ Create remote repo on GitLab named "test-case-11"
 
 Execute the following in a bash shell:
 ```
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 mkdir test-case-11
 cd test-case-11
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-11.git
+git remote add origin https://gitlab.com/~/test-case-11.git
 echo "hello" > foo.txt
 git add foo.txt
 export GIT_AUTHOR_DATE="2023-04-02 11:00:00"
@@ -782,8 +783,8 @@ git log --graph --abbrev-commit --decorate --format=format:"%h - (%cs) %s - %an 
 ```
 Confirm output shows the branch "a1" one commit ahead of "main" on remote and local:
 ```
-* ... - (2023-06-01) commit to prevent archival - Ellis Lempriere  (HEAD -> a1, origin/a1)
-* ... - (2023-04-02) inital commit - Ellis Lempriere  (origin/main, main)
+* ~ - (2023-06-01) commit to prevent archival - ~  (HEAD -> a1, origin/a1)
+* ~ - (2023-04-02) inital commit - ~  (origin/main, main)
 ```
 
 ### Act
@@ -797,15 +798,15 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-06-01) commit to prevent archival - Ellis Lempriere  (HEAD -> a1, origin/a1)
-        * ... - (2023-04-02) inital commit - Ellis Lempriere  (origin/main, main)
+        * ~ - (2023-06-01) commit to prevent archival - ~  (HEAD -> a1, origin/a1)
+        * ~ - (2023-04-02) inital commit - ~  (origin/main, main)
         ```
 - No notifications were sent
 
 ### Test Case Reset Instructions
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-11
     ```
 - Delete remote repo on GitLab
@@ -827,16 +828,16 @@ Create remote repo on GitLab named "test-case-12"
 
 Execute the following in a bash shell:
 ```
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 mkdir test-case-12
 cd test-case-12
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-12.git
+git remote add origin https://gitlab.com/~/test-case-12.git
 echo "hello" > foo.txt
 git add foo.txt
 git commit -m "initial commit"
 git push -u origin main
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 rm -rf test-case-12
 ```
 
@@ -864,14 +865,14 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-06-01) initial commit - Ellis Lempriere  (HEAD -> main, origin/main, origin/HEAD)
+        * ~ - (2023-06-01) initial commit - ~  (HEAD -> main, origin/main, origin/HEAD)
         ```
 
 ### Test Case Reset Instructions
 - Once the remote repo has been created in GitLab it should not need to be reset as no changes are being made to the repo
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-12
     ```
 - When re-running the test case, if the remote repo still exists, just do confirmation in the arrange section
@@ -889,7 +890,7 @@ Confirm that:
     - Remote repo with the name "test-case-13" does not exist in GitLab
     - Local repo does not exist
         ```
-        cd "C:\Users\ellis\Documents\repos"
+        cd "~\repos"
         dir
         ```
         - "test-case-13" should not appear in the output
@@ -909,7 +910,7 @@ Confirm that:
 ### Test Case Reset Instructions
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-13
     ```
 - Delete remote repo on GitLab
@@ -931,15 +932,16 @@ Create remote repo on GitLab named "test-case-14"
 
 Execute the following in a bash shell:
 ```
+cd "~\repos"
 mkdir test-case-14
 cd test-case-14
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-14.git
+git remote add origin https://gitlab.com/~/test-case-14.git
 echo "hello" > foo.txt
 git add foo.txt
 git commit -m "initial commit"
 git push -u origin main
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 rm -rf test-case-14
 mkdir test-case-14
 ```
@@ -948,7 +950,7 @@ mkdir test-case-14
     - Remote repo with the name "test-case-14" exists in GitLab with "main" branch pointing to "initial commit"
     - Local folder is not a git repo
         ```
-        cd "C:\Users\ellis\Documents\repos\test-case-14"
+        cd "~\repos\test-case-14"
         ```
         - "test-case-14" should not appear as a git repo
 
@@ -968,14 +970,14 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-06-01) initial commit - Ellis Lempriere  (HEAD -> main, origin/main)
+        * ~ - (2023-06-01) initial commit - ~  (HEAD -> main, origin/main)
         ```
 
 ### Test Case Reset Instructions
 - Once the remote repo has been created in GitLab it should not need to be reset as no changes are being made to the repo
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-14
     mkdir test-case-14
     ```
@@ -998,15 +1000,16 @@ Create remote repo on GitLab named "test-case-15"
 
 Execute the following in a bash shell:
 ```
+cd "~\repos"
 mkdir test-case-15
 cd test-case-15
 git init --initial-branch=main
-git remote add origin https://gitlab.com/EllisLempriere/test-case-15.git
+git remote add origin https://gitlab.com/~/test-case-15.git
 echo "hello" > foo.txt
 git add foo.txt
 git commit -m "initial commit"
 git push -u origin main
-cd "C:\Users\ellis\Documents\repos"
+cd "~\repos"
 rm -rf test-case-15
 mkdir test-case-15
 cd test-case-15
@@ -1037,14 +1040,14 @@ Confirm that:
     ```
     - Expected output:
         ```
-        * ... - (2023-06-01) initial commit - Ellis Lempriere  (HEAD -> main, origin/main)
+        * ~ - (2023-06-01) initial commit - ~  (HEAD -> main, origin/main)
         ```
 
 ### Test Case Reset Instructions
 - Once the remote repo has been created in GitLab it should not need to be reset as no changes are being made to the repo
 - Execute following commands to clear local repo
     ```
-    cd "C:\Users\ellis\Documents\repos"
+    cd "~\repos"
     rm -rf test-case-15
     mkdir test-case-15
     cd test-case-15

@@ -1,24 +1,25 @@
 # Manual Git Maintenace Instructions
 
+Compainon file to ManualTestCases.md - Describes the algorithm of the logic to clean a git repo
+
 ## Parameters
 ### Definitions
 **N**: Number of days without commits before a branch is stale.  
-**M**: Number of days without commits before an archive tag is stale.  
+**M**: Number of days after an archive tag is created before it becomes stale.  
 **K**: Number of days without commits before a branch or archive tag is stale a developer is notified of pending archival or deletion. 0 <= K < N & M  
 **Excluded Branches**: The list of branch names to exclude in archival.  
-**Execution Date**: The date at which the program is being run.
-**File Path**: The file path to the local repo on the machine.
+**Execution Date**: The date at which the program is being run.  
+**File Path**: The file path to the local repo on the machine.  
 **Remote URL**: The URL linking the remote repo.
 
-### We will assume
-Unless otherwise stated, parameters are 
+### Example/Default Parameters
 - N = 60
 - M = 30
 - K = 7
 - Excluded Branches = "main"
 - Execution Date = 2023-06-01
-- File Path = C:\Users\ellis\Documents\repos\test-case-(test case num)
-- Remote URL = https://gitlab.com/EllisLempriere/test-case-(test case num).git
+- File Path = ~\repos\test-case-2
+- Remote URL = https://gitlab.com/~/test-case-2.git
 
 **All instructions to be done in a git bash command shell**
 
@@ -30,8 +31,8 @@ Unless otherwise stated, parameters are
     # !! Enter test case number before running rest of commands !!
     export CASE_NUM=
 
-    export REMOTE_URL="https://gitlab.com/EllisLempriere/test-case-$CASE_NUM.git"
-    export FILE_PATH="C:\Users\ellis\Documents\repos\test-case-$CASE_NUM"
+    export REMOTE_URL="https://gitlab.com/~/test-case-$CASE_NUM.git"
+    export FILE_PATH="~\repos\test-case-$CASE_NUM"
     export EXE_DATE=$(date --date="2023-06-01 22:00:00")
     ```
 
@@ -42,7 +43,7 @@ Unless otherwise stated, parameters are
     ```
     - If directory is not changed into file path
         ```
-        cd "C:\Users\ellis\Documents\repos"
+        cd "~\repos"
         git clone $REMOTE_URL
         cd $FILE_PATH
         ```
@@ -58,8 +59,6 @@ Unless otherwise stated, parameters are
     - Else update local repo from remote
         ```
         git pull origin main
-        # Currently assuming ALL repos this runs on will have their trunk branch named main.
-        # Will this be a requirement of those using the program or can this be flexible?
         ```
         - If the remote does not have a main branch, it is empty, carry on to phase 2
         - Else if the repo is up to date, carry on to phase 2
@@ -104,15 +103,15 @@ Unless otherwise stated, parameters are
         echo "$num_days days since commit"
         ```
     - If number of days since last commit = 53 (N - K)
-        - Get last commiter's email (temporarily only last commiter)
+        - Get last 3 distinct committer's emails from list
             ```
-            git log -n 1 --format='%ae' $branch_name
+            git log --format='%ae' $branch_name
             ```
         - Send notification of pending deletion
     - If number of days since last commit >= 60 (N)
-        - Get last commiter's email (temporarily only last commiter)
+        - Get last 3 distinct committer's emails from list
             ```
-            git log -n 1 --format='%ae' $branch_name
+            git log --format='%ae' $branch_name
             ```
         - Send notification of archival
         - Create new archive tag and delete stale branch
@@ -141,22 +140,21 @@ Unless otherwise stated, parameters are
         ```
     - Check the date of the last commit and compare to current date
         ```
-        commit_date=$(git show -s --pretty=format:'%cD' $tag_name)
-        start_date=$(date --date="$commit_date" '+%s')
+        start_date=date -d ${tag_name:15:8}
         end_date=$(date --date="$EXE_DATE" '+%s')
         num_days=$(((end_date-start_date)/86400))
-        echo "$num_days days since commit"
+        echo "$num_days days since tag creation"
         ```
-    - If number of days since last commit = 83 (N + M - K)
-        - Get last commiter's email (temporarily only last commiter)
+    - If number of days since last commit = 23 (M - K)
+        - Get last 3 distinct committer's emails from list
             ```
-            git log -n 1 --format='%ae' $tag_name
+            git log --format='%ae' $tag_name
             ```
         - Send notification of pending archive tag deletion
-    - If number of days since last commit >= 90 (N + M)
-        - Get last commiter's email (temporarily only last commiter)
+    - If number of days since last commit >= 30 (M)
+        - Get last 3 distinct committer's emails from list
             ```
-            git log -n 1 --format='%ae' $tag_name
+            git log --format='%ae' $tag_name
             ```
         - Send notification of archive tag deletion
         - Delete archive tag

@@ -5,15 +5,11 @@ import Application.Models.ConfigSecrets;
 import Application.Models.Configs;
 import Application.Models.ConfigsSetupException;
 import Application.Models.RepoConfig;
+import TestUtils.TestUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -48,7 +44,7 @@ public class ConfigGetterTest {
     void getConfigTest2() {
         try {
             // arrange
-            String filePath = getFilePath("valid-test-config.json");
+            String filePath = TestUtils.getFullFilePath("valid-test-config.json");
             ConfigGetter getter = new ConfigGetter(filePath);
 
             ConfigSecrets expectedSecrets = new ConfigSecrets("user", "pass");
@@ -71,7 +67,7 @@ public class ConfigGetterTest {
     void getConfigTest3() {
         try {
             // arrange
-            String filePath = getFilePath("missing-retries-test-config.json");
+            String filePath = TestUtils.getFullFilePath("missing-retries-test-config.json");
             ConfigGetter getter = new ConfigGetter(filePath);
 
             // act/assert
@@ -87,7 +83,7 @@ public class ConfigGetterTest {
     void getConfigTest4() {
         try {
             // arrange
-            String filePath = getFilePath("empty-test-config.json");
+            String filePath = TestUtils.getFullFilePath("empty-test-config.json");
             ConfigGetter getter = new ConfigGetter(filePath);
 
             // act/assert
@@ -103,7 +99,7 @@ public class ConfigGetterTest {
     void getConfigTest5() {
         try {
             // arrange
-            String filePath = getFilePath("missing-config-secrets-test-config.json");
+            String filePath = TestUtils.getFullFilePath("missing-config-secrets-test-config.json");
             ConfigGetter getter = new ConfigGetter(filePath);
 
             // act/assert
@@ -119,7 +115,7 @@ public class ConfigGetterTest {
     void getConfigTest6() {
         try {
             // arrange
-            String filePath = getFilePath("missing-repos-test-config.json");
+            String filePath = TestUtils.getFullFilePath("missing-repos-test-config.json");
             ConfigGetter getter = new ConfigGetter(filePath);
 
             // act/assert
@@ -135,7 +131,7 @@ public class ConfigGetterTest {
     void getConfigTest7() {
         try {
             // arrange
-            String filePath = getFilePath("empty-repos-test-config.json");
+            String filePath = TestUtils.getFullFilePath("empty-repos-test-config.json");
             ConfigGetter getter = new ConfigGetter(filePath);
 
             // act
@@ -174,15 +170,5 @@ public class ConfigGetterTest {
                 staleTagDays2, notificationBeforeActionDays2, recipients2));
 
         return expectedRepoConfigs;
-    }
-
-    private String getFilePath(String fileName) {
-        try (Stream<Path> paths = Files.find(Paths.get("src"), 50,
-                (p, attr) -> p.getFileName().toString().matches(fileName))) {
-
-            return paths.toList().get(0).toAbsolutePath().toString();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

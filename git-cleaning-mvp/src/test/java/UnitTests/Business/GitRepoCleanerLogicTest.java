@@ -5,6 +5,7 @@ import Business.GitRepoCleanerLogic;
 import Business.INotificationLogic;
 import Business.Models.*;
 import Provider.IGitProvider;
+import TestUtils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -160,7 +161,7 @@ public class GitRepoCleanerLogicTest {
     @DisplayName("Local repo does exist, cloneRepo not called, setupRepo, and updateRepo called")
     void selectRepoTest2() {
         // arrange
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -202,7 +203,7 @@ public class GitRepoCleanerLogicTest {
     @DisplayName("setupRepo throws exception, throws exception")
     void selectRepoTest4() {
         // arrange
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -221,7 +222,7 @@ public class GitRepoCleanerLogicTest {
     @DisplayName("updateRepo throws exception, throws exception")
     void selectRepoTest5() {
         // arrange
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -240,7 +241,7 @@ public class GitRepoCleanerLogicTest {
     @DisplayName("getBranches throws an exception, execution halted")
     void cleanRepoTest1() {
         // arrange
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -262,7 +263,7 @@ public class GitRepoCleanerLogicTest {
     @DisplayName("getTags throws an exception, execution halted")
     void cleanRepoTest2() {
         // arrange
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -284,7 +285,7 @@ public class GitRepoCleanerLogicTest {
     @DisplayName("List of branches from getBranches passed to cleanBranches")
     void cleanRepoTest3() {
         // arrange
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(Collections.singletonList("main")), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -310,7 +311,7 @@ public class GitRepoCleanerLogicTest {
     @DisplayName("List of tags from getTags passed to cleanTags")
     void cleanRepoTest4() {
         // arrange
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -338,7 +339,7 @@ public class GitRepoCleanerLogicTest {
         Branch testBranch = new Branch("branch", Collections.emptyList());
         Tag expectedTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -362,7 +363,7 @@ public class GitRepoCleanerLogicTest {
         Branch testBranch = new Branch("branch", Collections.emptyList());
         Tag testTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -388,7 +389,7 @@ public class GitRepoCleanerLogicTest {
         // arrange
         Branch testBranch = new Branch("branch", Collections.emptyList());
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -413,7 +414,7 @@ public class GitRepoCleanerLogicTest {
         Branch testBranch = new Branch("branch", Collections.emptyList());
         Tag testTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -439,7 +440,7 @@ public class GitRepoCleanerLogicTest {
         Branch testBranch = new Branch("branch", Collections.emptyList());
         Tag testTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -466,7 +467,7 @@ public class GitRepoCleanerLogicTest {
         Branch testBranch = new Branch("branch", Collections.emptyList());
         Tag testTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -492,7 +493,7 @@ public class GitRepoCleanerLogicTest {
         Branch testBranch = new Branch("branch", Collections.emptyList());
         Tag testTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -520,7 +521,7 @@ public class GitRepoCleanerLogicTest {
         // arrange
         List<Branch> branches = new ArrayList<>();
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -542,7 +543,7 @@ public class GitRepoCleanerLogicTest {
         branches.add(new Branch("main", Collections.emptyList()));
         branches.add(new Branch("excluded", Collections.emptyList()));
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", Arrays.asList("main", "excluded"), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -564,7 +565,7 @@ public class GitRepoCleanerLogicTest {
         branches.add(new Branch("main", Collections.emptyList()));
         branches.add(new Branch("a1", Collections.singletonList(new Commit("id", 1684602000, "email"))));
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", List.of("main"), new TakeActionCountsDays(60, 30, 7));
         repoCleaningInfoList.add(info);
 
@@ -586,7 +587,7 @@ public class GitRepoCleanerLogicTest {
         branches.add(new Branch("main", Collections.emptyList()));
         branches.add(new Branch("a1", Collections.singletonList(new Commit("id", 1672596000, "email"))));
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", List.of("main"), new TakeActionCountsDays(60, 30, 7));
         repoCleaningInfoList.add(info);
 
@@ -611,7 +612,7 @@ public class GitRepoCleanerLogicTest {
         List<Branch> branches = new ArrayList<>();
         branches.add(new Branch("a1", Collections.singletonList(new Commit("id", 1681023601, "email"))));
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(60, 30, 7));
         repoCleaningInfoList.add(info);
 
@@ -637,7 +638,7 @@ public class GitRepoCleanerLogicTest {
         List<Branch> branches = new ArrayList<>();
         branches.add(new Branch("a1", Collections.singletonList(new Commit("id", 1681023601, "email"))));
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(60, 30, 7));
         repoCleaningInfoList.add(info);
 
@@ -667,7 +668,7 @@ public class GitRepoCleanerLogicTest {
         // arrange
         Tag testTag = new Tag("archiveTag", Collections.emptyList());
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -691,7 +692,7 @@ public class GitRepoCleanerLogicTest {
         // arrange
         Tag testTag = new Tag("archiveTag", Collections.emptyList());
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -714,7 +715,7 @@ public class GitRepoCleanerLogicTest {
         // arrange
         Tag testTag = new Tag("archiveTag", Collections.emptyList());
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -741,7 +742,7 @@ public class GitRepoCleanerLogicTest {
         // arrange
         List<Tag> tags = new ArrayList<>();
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -762,7 +763,7 @@ public class GitRepoCleanerLogicTest {
         tags.add(new Tag("not_an_archive_tag", Collections.emptyList()));
         tags.add(new Tag("anotherTag", Collections.emptyList()));
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
 
@@ -783,7 +784,7 @@ public class GitRepoCleanerLogicTest {
         tags.add(new Tag("not_an_archive_tag", Collections.emptyList()));
         tags.add(new Tag("zArchiveBranch_20230528_branch", Collections.emptyList()));
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(60, 30, 7));
         repoCleaningInfoList.add(info);
 
@@ -804,7 +805,7 @@ public class GitRepoCleanerLogicTest {
         tags.add(new Tag("not_an_archive_tag", Collections.emptyList()));
         tags.add(new Tag("zArchiveBranch_20230101_branch", Collections.emptyList()));
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", List.of("main"), new TakeActionCountsDays(60, 30, 7));
         repoCleaningInfoList.add(info);
 
@@ -828,7 +829,7 @@ public class GitRepoCleanerLogicTest {
         List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("zArchiveBranch_20230509_branch", Collections.emptyList()));
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(60, 30, 7));
         repoCleaningInfoList.add(info);
 
@@ -853,7 +854,7 @@ public class GitRepoCleanerLogicTest {
         List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("zArchiveBranch_20230509_branch", Collections.emptyList()));
 
-        RepoCleaningInfo info = new RepoCleaningInfo("1", "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner",
+        RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(60, 30, 7));
         repoCleaningInfoList.add(info);
 

@@ -2,6 +2,7 @@ package UnitTests.Application;
 
 import Application.Models.ConfigSecrets;
 import Application.Models.ConfigsSetupException;
+import TestUtils.TestUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -26,9 +27,7 @@ public class ConfigSecretsTest {
             ConfigSecrets expected = new ConfigSecrets("user", "pass");
 
             // act
-            ConfigSecrets actual = new ConfigSecrets(
-                    "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner\\git-cleaning-mvp" +
-                    "\\src\\test\\resources\\Application\\valid-test-secrets.properties");
+            ConfigSecrets actual = new ConfigSecrets(TestUtils.getFullFilePath("valid-test-secrets.properties"));
 
             // assert
             assertEquals(expected, actual);
@@ -54,9 +53,7 @@ public class ConfigSecretsTest {
 
         // act/assert
         assertThrows(ConfigsSetupException.class, () -> new ConfigSecrets(
-                "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner\\git-cleaning-mvp" +
-                "\\src\\test\\resources\\Application\\missing-user-test-secrets.properties"
-        ));
+                TestUtils.getFullFilePath("missing-user-test-secrets.properties")));
     }
 
     @Test
@@ -66,8 +63,6 @@ public class ConfigSecretsTest {
 
         // act/assert
         assertThrows(ConfigsSetupException.class, () -> new ConfigSecrets(
-                "C:\\Users\\ellis\\Documents\\repos\\git_repo_cleaner\\git-cleaning-mvp" +
-                        "\\src\\test\\resources\\Application\\missing-pass-test-secrets.properties"
-        ));
+                TestUtils.getFullFilePath("missing-pass-test-secrets.properties")));
     }
 }

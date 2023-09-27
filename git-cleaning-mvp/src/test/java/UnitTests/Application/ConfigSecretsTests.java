@@ -3,16 +3,14 @@ package UnitTests.Application;
 import Application.Models.ConfigSecrets;
 import Application.Models.ConfigsSetupException;
 import TestUtils.TestUtils;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ConfigSecretsTest {
+public class ConfigSecretsTests {
 
     @Test
-    @DisplayName("Pass in null, throws exception")
-    void constructorTest1() {
+    void Constructor_NullParam_ThrowsException() {
         // arrange
 
         // act/assert
@@ -20,8 +18,7 @@ public class ConfigSecretsTest {
     }
 
     @Test
-    @DisplayName("Valid file, expected object created")
-    void constructorTest2() {
+    void Constructor_ValidFile_CreatesExpectedObject() {
         try {
             // arrange
             ConfigSecrets expected = new ConfigSecrets("user", "pass");
@@ -38,8 +35,7 @@ public class ConfigSecretsTest {
     }
 
     @Test
-    @DisplayName("Pass invalid file, throws an exception")
-    void constructorTest3() {
+    void Constructor_InvalidFile_ThrowsException() {
         // arrange
 
         // act/assert
@@ -47,8 +43,7 @@ public class ConfigSecretsTest {
     }
 
     @Test
-    @DisplayName("Pass file missing username property, throws an exception")
-    void constructorTest4() {
+    void Constructor_MissingUsername_ThrowsException() {
         // arrange
 
         // act/assert
@@ -57,8 +52,7 @@ public class ConfigSecretsTest {
     }
 
     @Test
-    @DisplayName("Pass file missing password property, throws an exception")
-    void constructorTest5() {
+    void Constructor_MissingPassword_ThrowsException() {
         // arrange
 
         // act/assert

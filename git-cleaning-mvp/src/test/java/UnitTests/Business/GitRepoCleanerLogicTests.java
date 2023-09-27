@@ -7,7 +7,6 @@ import Business.Models.*;
 import Provider.IGitProvider;
 import TestUtils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -19,7 +18,7 @@ import java.util.logging.Level;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-public class GitRepoCleanerLogicTest {
+public class GitRepoCleanerLogicTests {
 
     private IGitProvider mockGitProvider;
     private INotificationLogic mockNotificationLogic;
@@ -44,8 +43,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Null value for repo list, throws exception")
-    void constructorTest1() {
+    void Constructor_NullRepoList_ThrowsException() {
         // arrange
 
         // act/assert
@@ -54,8 +52,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Null value for gitProvider, throws exception")
-    void constructorTest2() {
+    void Constructor_NullGitProvider_ThrowsException() {
         // arrange
 
         // act/assert
@@ -64,8 +61,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Null value for notificationLogic, throws exception")
-    void constructorTest3() {
+    void Constructor_NullNotificationLogic_ThrowsException() {
         // arrange
 
         // act/assert
@@ -74,8 +70,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Null value for logger, throws exception")
-    void constructorTest4() {
+    void Constructor_NullLogger_ThrowsException() {
         // arrange
 
         // act/assert
@@ -84,8 +79,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Illegal value for executionTime, throws exception")
-    void constructorTest5() {
+    void Constructor_InvalidExecutionTime_ThrowsException() {
         // arrange
 
         // act/assert
@@ -94,8 +88,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("All valid values, creates instance")
-    void constructorTest6() {
+    void Constructor_ValidParams_CreatesInstance() {
         // arrange
 
         // act
@@ -108,8 +101,7 @@ public class GitRepoCleanerLogicTest {
 
 
     @Test
-    @DisplayName("Two repos to clean, correct methods get called twice")
-    void cleanReposTest1() {
+    void CleanRepos_GivenTwoRepos_CallsMethodsToCleanBoth() {
         // arrange
         RepoCleaningInfo info1 = new RepoCleaningInfo("1", "dir1", "remote1", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         RepoCleaningInfo info2 = new RepoCleaningInfo("2", "dir2", "remote2", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
@@ -134,9 +126,9 @@ public class GitRepoCleanerLogicTest {
         }
     }
 
+
     @Test
-    @DisplayName("Local repo does not exist, cloneRepo, setupRepo, and updateRepo called")
-    void selectRepoTest1() {
+    void SelectRepo_LocalRepoNotExist_ProviderCalledToSetupLocal() {
         // arrange
         RepoCleaningInfo info = new RepoCleaningInfo("1", "dir1", "remote1", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
@@ -158,8 +150,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Local repo does exist, cloneRepo not called, setupRepo, and updateRepo called")
-    void selectRepoTest2() {
+    void SelectRepo_LocalRepoExist_ProviderCalledToUpdateLocal() {
         // arrange
         RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
@@ -182,8 +173,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Local repo does not exist, cloneRepo throws exception, throws exception")
-    void selectRepoTest3() {
+    void SelectRepo_ProviderThrowsExceptionOnCloneRepo_ThrowsException() {
         // arrange
         RepoCleaningInfo info = new RepoCleaningInfo("1", "dir1", "remote1", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
         repoCleaningInfoList.add(info);
@@ -200,8 +190,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("setupRepo throws exception, throws exception")
-    void selectRepoTest4() {
+    void SelectRepo_ProviderThrowsExceptionOnSetupRepo_ThrowsException() {
         // arrange
         RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
@@ -219,8 +208,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("updateRepo throws exception, throws exception")
-    void selectRepoTest5() {
+    void SelectRepo_ProviderThrowsExceptionOnUpdateRepo_ThrowsException() {
         // arrange
         RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
@@ -237,9 +225,9 @@ public class GitRepoCleanerLogicTest {
         assertThrows(GitUpdateException.class, () -> logic.selectRepo(info.repoDir(), info.remoteUri(), 1));
     }
 
+
     @Test
-    @DisplayName("getBranches throws an exception, execution halted")
-    void cleanRepoTest1() {
+    void CleanRepo_ProviderThrowsExceptionOnGetBranches_SkipsCleaningRepo() {
         // arrange
         RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
@@ -260,8 +248,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("getTags throws an exception, execution halted")
-    void cleanRepoTest2() {
+    void CleanRepo_ProviderThrowsExceptionOnGetTags_SkipsCleaningRepo() {
         // arrange
         RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
@@ -282,8 +269,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("List of branches from getBranches passed to cleanBranches")
-    void cleanRepoTest3() {
+    void CleanRepo_NoIssues_CorrectListOfBranchesPassedToCleanBranches() {
         // arrange
         RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(Collections.singletonList("main")), new TakeActionCountsDays(0, 0, 0));
@@ -308,8 +294,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("List of tags from getTags passed to cleanTags")
-    void cleanRepoTest4() {
+    void CleanRepo_NoIssues_CorrectListOfTagsPassedToCleanTags() {
         // arrange
         RepoCleaningInfo info = new RepoCleaningInfo("1", TestUtils.getProjectRepoDir(),
                 "remote", new ArrayList<>(), new TakeActionCountsDays(0, 0, 0));
@@ -332,9 +317,9 @@ public class GitRepoCleanerLogicTest {
         verify(cleanerSpy, times(1)).cleanTags(tagList, info.repoId(), info.takeActionCountsDays(), 1);
     }
 
+
     @Test
-    @DisplayName("Correct tag created and passed to createTag")
-    void archiveBranchTest1() {
+    void ArchiveBranch_ValidParameters_CorrectTagCreatedAndPassedToProvider() {
         // arrange
         Branch testBranch = new Branch("branch", Collections.emptyList());
         Tag expectedTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
@@ -357,8 +342,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("createTag throws exception, halts execution")
-    void archiveBranchTest2() {
+    void ArchiveBranch_CreateTagThrowsException_StopsCleaningBranch() {
         // arrange
         Branch testBranch = new Branch("branch", Collections.emptyList());
         Tag testTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
@@ -384,8 +368,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("deleteBranch throws exception, halts execution")
-    void archiveBranchTest3() {
+    void ArchiveBranch_DeleteBranchThrowsException_StopsCleaningBranch() {
         // arrange
         Branch testBranch = new Branch("branch", Collections.emptyList());
 
@@ -408,8 +391,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("deleteBranch throws exception, tries to delete archive tag, deleteTag throws exception, halts execution")
-    void archiveBranchTest4() {
+    void ArchiveBranch_FailedDeletionOfExtraArchiveTag_StopsCleaningBranch() {
         // arrange
         Branch testBranch = new Branch("branch", Collections.emptyList());
         Tag testTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
@@ -434,8 +416,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("deleteBranch throws exception, successfully deletes extra tag, halts execution")
-    void archiveBranchTest5() {
+    void ArchiveBranch_DeleteBranchThrowsException_ProviderCalledToDeleteExtraArchiveTag() {
         // arrange
         Branch testBranch = new Branch("branch", Collections.emptyList());
         Tag testTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
@@ -461,8 +442,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("No git exceptions, branch archived")
-    void archiveBranchTest6() {
+    void ArchiveBranch_NoIssues_BranchSuccessfullyArchived() {
         // arrange
         Branch testBranch = new Branch("branch", Collections.emptyList());
         Tag testTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
@@ -487,8 +467,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("sendNotificationArchival throws exception, warning logged")
-    void archiveBranchTest7() {
+    void ArchiveBranch_NotificationLogicThrowsException_WarningLogged() {
         // arrange
         Branch testBranch = new Branch("branch", Collections.emptyList());
         Tag testTag = new Tag("zArchiveBranch_20230601_branch", Collections.emptyList());
@@ -516,8 +495,7 @@ public class GitRepoCleanerLogicTest {
 
 
     @Test
-    @DisplayName("Empty list of branches to clean, returns empty list")
-    void cleanBranchesTest1() {
+    void CleanBranches_EmptyBranchesParameter_ReturnsEmptyList() {
         // arrange
         List<Branch> branches = new ArrayList<>();
 
@@ -536,8 +514,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("All branches in list to clean are in excluded list, returns empty list")
-    void cleanBranchesTest2() {
+    void CleanBranches_AllBranchesExcluded_ReturnsEmptyList() {
         // arrange
         List<Branch> branches = new ArrayList<>();
         branches.add(new Branch("main", Collections.emptyList()));
@@ -558,8 +535,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Branches to be cleaned are excluded or are not stale, returns empty list")
-    void cleanBranchesTest3() {
+    void CleanBranches_BranchesAreNotStale_ReturnsEmptyList() {
         // arrange
         List<Branch> branches = new ArrayList<>();
         branches.add(new Branch("main", Collections.emptyList()));
@@ -580,8 +556,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Stale branches are returned and correct call to archiveBranch made")
-    void cleanBranchesTest4() {
+    void CleanBranches_GivenAStaleBranch_StaleBranchReturnedAndArchiveBranchCalled() {
         // arrange
         List<Branch> branches = new ArrayList<>();
         branches.add(new Branch("main", Collections.emptyList()));
@@ -606,8 +581,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Branch pending archival, notification sent, empty list returned")
-    void cleanBranchesTest5() {
+    void CleanBranches_BranchPendingArchival_NotificationSentAndEmptyListReturned() {
         // arrange
         List<Branch> branches = new ArrayList<>();
         branches.add(new Branch("a1", Collections.singletonList(new Commit("id", 1681023601, "email"))));
@@ -632,8 +606,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Branch pending archival, sendNotificationPendingArchival throws exception, warning logged, empty list returned")
-    void cleanBranchesTest6() {
+    void CleanBranches_NotificationLogicThrowsExceptionForPendingArchival_WarningLoggedAndEmptyListReturned() {
         // arrange
         List<Branch> branches = new ArrayList<>();
         branches.add(new Branch("a1", Collections.singletonList(new Commit("id", 1681023601, "email"))));
@@ -663,8 +636,7 @@ public class GitRepoCleanerLogicTest {
 
 
     @Test
-    @DisplayName("deleteTag throws an exception tag deletion logged as failed")
-    void deleteArchiveTagTest1() {
+    void DeleteArchiveTag_ProviderThrowsExceptionOnDeleteTag_LoggedFailedTagDeletion() {
         // arrange
         Tag testTag = new Tag("archiveTag", Collections.emptyList());
 
@@ -687,8 +659,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Tag deleted, sendNotificationTagDeletion called")
-    void deleteArchiveTagTest2() {
+    void DeleteArchiveTag_TagSuccessfullyDeleted_NotificationLogicCalled() {
         // arrange
         Tag testTag = new Tag("archiveTag", Collections.emptyList());
 
@@ -710,8 +681,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Tag deleted, sendNotificationTagDeletion throws exception, failure to notify logged")
-    void deleteArchiveTagTest3() {
+    void DeleteArchiveTag_NotificationLogicThrowsExceptionOnTagDeletion_LoggedFailureToNotify() {
         // arrange
         Tag testTag = new Tag("archiveTag", Collections.emptyList());
 
@@ -737,8 +707,7 @@ public class GitRepoCleanerLogicTest {
 
 
     @Test
-    @DisplayName("Empty list of tags to clean, returns empty list")
-    void cleanTagsTest1() {
+    void CleanTags_TagParameterEmpty_ReturnsEmptyList() {
         // arrange
         List<Tag> tags = new ArrayList<>();
 
@@ -756,8 +725,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("All tags in list to clean are not archive tags, returns empty list")
-    void cleanTagsTest2() {
+    void CleanTags_TagsAreNotArchiveTags_ReturnsEmptyList() {
         // arrange
         List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("not_an_archive_tag", Collections.emptyList()));
@@ -777,8 +745,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Tags to be cleaned are not archive tags or are not stale, returns empty list")
-    void cleanTagsTest3() {
+    void CleanTags_NonStaleArchiveTag_ReturnsEmptyList() {
         // arrange
         List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("not_an_archive_tag", Collections.emptyList()));
@@ -798,8 +765,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Deleted tags are returned and correct call to deleteTag made")
-    void cleanTagsTest4() {
+    void CleanTags_StaleArchiveTag_DeletedTagsReturnedAndDeleteTagCalled() {
         // arrange
         List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("not_an_archive_tag", Collections.emptyList()));
@@ -823,8 +789,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Tag pending archival, notification sent, empty list returned")
-    void cleanTagsTest5() {
+    void CleanTags_TagPendingArchival_NotificationSentAndEmptyListReturned() {
         // arrange
         List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("zArchiveBranch_20230509_branch", Collections.emptyList()));
@@ -848,8 +813,7 @@ public class GitRepoCleanerLogicTest {
     }
 
     @Test
-    @DisplayName("Tag pending deletion, sendNotificationPendingTagDeletion throws exception, warning logged, empty list returned")
-    void cleanTagsTest6() {
+    void CleanTags_NotificationLogicThrowsExceptionOnPendingTagDeletion_WarningLoggedAndEmptyListReturned() {
         // arrange
         List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("zArchiveBranch_20230509_branch", Collections.emptyList()));

@@ -5,7 +5,6 @@ import Business.Models.*;
 import Business.NotificationLogic;
 import Provider.IEmailProvider;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -16,7 +15,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-public class NotificationLogicTest {
+public class NotificationLogicTests {
 
     private static NotificationLogic notificationLogic;
 
@@ -29,8 +28,7 @@ public class NotificationLogicTest {
 
 
     @Test
-    @DisplayName("Null email provider parameter, throws exception")
-    void constructorTest1() {
+    void Constructor_NullEmailProvider_ThrowsException() {
         // arrange
 
         // act/assert
@@ -38,8 +36,7 @@ public class NotificationLogicTest {
     }
 
     @Test
-    @DisplayName("Null repo list parameter, throws exception")
-    void constructorTest2() {
+    void Constructor_NullRepoList_ThrowsException() {
         // arrange
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
 
@@ -48,8 +45,7 @@ public class NotificationLogicTest {
     }
 
     @Test
-    @DisplayName("All valid parameters, creates instance")
-    void constructorTest3() {
+    void Constructor_ValidParameters_CreatesInstance() {
         // arrange
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
 
@@ -62,8 +58,7 @@ public class NotificationLogicTest {
 
 
     @Test
-    @DisplayName("Null branch parameter, throws exception")
-    void sendNotificationPendingArchivalTest1() {
+    void SendNotificationPendingArchival_NullBranchParam_ThrowsException() {
         // arrange
 
         // act/assert
@@ -71,8 +66,7 @@ public class NotificationLogicTest {
     }
 
     @Test
-    @DisplayName("Null repo id parameter, throws exception")
-    void sendNotificationPendingArchivalTest2() {
+    void SendNotificationPendingArchival_NullRepoId_ThrowsException() {
         // arrange
         Branch mockBranch = new Branch("", new ArrayList<>());
 
@@ -81,8 +75,7 @@ public class NotificationLogicTest {
     }
 
     @Test
-    @DisplayName("Repo id does not exist in given repo list, throws exception")
-    void sendNotificationPendingArchivalTest3() {
+    void SendNotificationPendingArchival_RepoIdNotInRepoList_ThrowsException() {
         // arrange
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
         List<RepoNotificationInfo> mockInfo = new ArrayList<>();
@@ -96,8 +89,7 @@ public class NotificationLogicTest {
     }
 
     @Test
-    @DisplayName("Empty committer list and empty recipient list, no notifications sent")
-    void sendNotificationPendingArchivalTest4() {
+    void SendNotificationPendingArchival_EmptyCommitterAndRecipientList_NoNotificationsSent() {
         // arrange
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
         List<RepoNotificationInfo> repos = new ArrayList<>();
@@ -121,8 +113,7 @@ public class NotificationLogicTest {
     }
 
     @Test
-    @DisplayName("Multiple RepoNotificationInfo given on construction, correct recipient list used")
-    void sendNotificationPendingArchivalTest5() {
+    void SendNotificationPendingArchival_MultipleIntendedRecipients_MessagesSentToCorrectPeople() {
         // arrange
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
         ICustomLogger mockLogger = mock(ICustomLogger.class);
@@ -159,8 +150,7 @@ public class NotificationLogicTest {
     }
 
     @Test
-    @DisplayName("Given recipient list and many commits w/different authors, notifications sent to correct emails")
-    void sendNotificationPendingArchivalTest6() {
+    void SendNotificationPendingArchival_MoreThanThreeCommitters_MessagesSentToLastThreeCommittersAndRecipients() {
         // arrange
         IEmailProvider mockEmailProvider = mock(IEmailProvider.class);
         List<RepoNotificationInfo> repos = new ArrayList<>();

@@ -1,7 +1,6 @@
 package UnitTests.Business.Models;
 
 import Business.Models.ArchiveTagName;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -10,11 +9,10 @@ import java.time.ZonedDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ArchiveTagNameTest {
+public class ArchiveTagNameTests {
 
     @Test
-    @DisplayName("Valid parameters, creates expected instance")
-    void constructorTest1() {
+    void Constructor_ValidParams_CreatesExpectedObject() {
         // arrange
         String expectedName = "zArchiveBranch_20230601_branch";
         ZonedDateTime expectedCreateDate = ZonedDateTime.ofInstant(Instant.parse("2023-06-01T00:00:01-07:00"),
@@ -32,9 +30,9 @@ public class ArchiveTagNameTest {
         );
     }
 
+
     @Test
-    @DisplayName("Valid archive tag, returns expected tag")
-    void tryParseTest1() {
+    void TryParse_ValidArchiveTag_ReturnsExpectedObject() {
         // arrange
         String expectedName = "zArchiveBranch_20230601_branch";
         ZonedDateTime expectedCreateDate = ZonedDateTime.ofInstant(Instant.parse("2023-06-01T00:00:01Z"),
@@ -53,8 +51,7 @@ public class ArchiveTagNameTest {
     }
 
     @Test
-    @DisplayName("Non-archive tag name, returns null")
-    void tryParseTest2() {
+    void TryParse_NotArchiveTag_ReturnsNull() {
         // arrange
 
         // act

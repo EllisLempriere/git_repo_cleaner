@@ -6,27 +6,25 @@ import Application.Models.Configs;
 import Application.Models.ConfigsSetupException;
 import Application.Models.RepoConfig;
 import TestUtils.TestUtils;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ConfigGetterTest {
+public class ConfigGetterTests {
 
     @Test
-    @DisplayName("Test for null config file name on construction")
-    void constructorTest1() {
+    void Constructor_NullConfigFile_ThrowsException() {
         // arrange
 
         // act/assert
         assertThrows(ConfigsSetupException.class, () -> new ConfigGetter(null));
     }
 
+
     @Test
-    @DisplayName("Test with a file that does not exist")
-    void getConfigTest1() {
+    void GetConfigs_FileDoesNotExist_ThrowsException() {
         try {
             // arrange
             ConfigGetter getter = new ConfigGetter("invalid.file");
@@ -40,8 +38,7 @@ public class ConfigGetterTest {
     }
 
     @Test
-    @DisplayName("Valid basic config, ensure expected object is created")
-    void getConfigTest2() {
+    void GetConfigs_ValidConfigFile_CreatesExpectedConfigs() {
         try {
             // arrange
             String filePath = TestUtils.getFullFilePath("valid-test-config.json");
@@ -63,8 +60,7 @@ public class ConfigGetterTest {
     }
 
     @Test
-    @DisplayName("Config file missing retries value, throws exception")
-    void getConfigTest3() {
+    void GetConfigs_MissingRetries_ThrowsException() {
         try {
             // arrange
             String filePath = TestUtils.getFullFilePath("missing-retries-test-config.json");
@@ -79,8 +75,7 @@ public class ConfigGetterTest {
     }
 
     @Test
-    @DisplayName("Empty config file, throws exception")
-    void getConfigTest4() {
+    void GetConfigs_EmptyFile_ThrowsException() {
         try {
             // arrange
             String filePath = TestUtils.getFullFilePath("empty-test-config.json");
@@ -95,8 +90,7 @@ public class ConfigGetterTest {
     }
 
     @Test
-    @DisplayName("Config file missing config secrets value, throws exception")
-    void getConfigTest5() {
+    void GetConfigs_MissingConfigSecrets_ThrowsException() {
         try {
             // arrange
             String filePath = TestUtils.getFullFilePath("missing-config-secrets-test-config.json");
@@ -111,8 +105,7 @@ public class ConfigGetterTest {
     }
 
     @Test
-    @DisplayName("Config file missing repos value, throws exception")
-    void getConfigTest6() {
+    void GetConfigs_MissingRepos_ThrowsException() {
         try {
             // arrange
             String filePath = TestUtils.getFullFilePath("missing-repos-test-config.json");
@@ -127,8 +120,7 @@ public class ConfigGetterTest {
     }
 
     @Test
-    @DisplayName("Repos list in config file is empty, returns configs with empty repos list")
-    void getConfigTest7() {
+    void GetConfig_EmptyReposList_ReturnsConfigsWithReposListEmpty() {
         try {
             // arrange
             String filePath = TestUtils.getFullFilePath("empty-repos-test-config.json");

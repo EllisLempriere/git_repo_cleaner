@@ -12,7 +12,6 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -35,7 +34,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-public class GitProviderTest {
+public class GitProviderTests {
 
     private GitProvider getProvider() {
         ConfigSecrets secrets = new ConfigSecrets("user", "pass");
@@ -53,8 +52,7 @@ public class GitProviderTest {
 
 
     @Test
-    @DisplayName("Null ConfigSecrets parameter, throws exception")
-    void constructorTest1() {
+    void Constructor_NullConfigSecrets_ThrowsException() {
         // arrange
 
         // act/assert
@@ -62,9 +60,8 @@ public class GitProviderTest {
     }
 
     @ParameterizedTest
-    @DisplayName("Null values in ConfigSecrets parameter, throws exception")
     @CsvSource({", pass", "user,"})
-    void constructorTest2(String username, String password) {
+    void Constructor_NullValuesToConfigSecrets_ThrowsException(String username, String password) {
         // arrange
         ConfigSecrets invalidSecrets = new ConfigSecrets(username, password);
 
@@ -73,8 +70,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Invalid retries value < 0")
-    void constructorTest3() {
+    void Constructor_InvalidRetries_ThrowsException() {
         // arrange
         ConfigSecrets secrets = new ConfigSecrets("user", "pass");
 
@@ -83,8 +79,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Valid parameters, creates an instance")
-    void constructorTest4() {
+    void Constructor_ValidParameters_CreatesInstance() {
         // arrange
         ConfigSecrets secrets = new ConfigSecrets("user", "pass");
 
@@ -97,8 +92,7 @@ public class GitProviderTest {
 
 
     @Test
-    @DisplayName("Null repo directory, throws exception")
-    void setupRepoTest1() {
+    void SetupRepo_NullRepoDir_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -107,9 +101,8 @@ public class GitProviderTest {
     }
 
     @ParameterizedTest
-    @DisplayName("Repo directory param does not point to a git repo, throws exception")
     @ValueSource(strings = {"not_a_file_path", "C:\\Documents"})
-    void setupRepoTest2(String invalidPath) {
+    void SetupRepo_InvalidRepoDir_ThrowsException(String invalidPath) {
         // arrange
         GitProvider provider = getProvider();
 
@@ -118,8 +111,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Use project repo as valid repo to set up")
-    void setupRepoTest3() {
+    void SetupRepo_ValidRepoDir_SuccessfullyExecutes() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -129,8 +121,7 @@ public class GitProviderTest {
 
 
     @Test
-    @DisplayName("Null repo directory parameter, throws exception")
-    void cloneRepoTest1() {
+    void CloneRepo_NullRepoDir_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -140,8 +131,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Null remote uri parameter, throws exception")
-    void cloneRepoTest2() {
+    void CloneRepo_NullRemoteUri_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -151,9 +141,8 @@ public class GitProviderTest {
     }
 
     @ParameterizedTest
-    @DisplayName("Invalid remote uri, throws exception")
     @ValueSource(strings = {"notAUri", "invalid.com", "https://gitlab.com/EllisLempriere/not-exist.git"})
-    void cloneRepoTest3(String invalidUri) {
+    void CloneRepo_InvalidRemoteUri_ThrowsException(String invalidUri) {
         // arrange
         GitProvider provider = getProvider();
 
@@ -163,8 +152,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("File path already exists and is populated, throws exception")
-    void cloneRepoTest4() {
+    void CloneRepo_FilePathExistsAndIsPopulated_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -175,8 +163,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Successfully clones repo")
-    void cloneRepoTest5() {
+    void CloneRepo_ValidSetup_SuccessfullyExecutes() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -199,8 +186,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Clone from empty repo, initializes new repo")
-    void cloneRepoTest6() {
+    void CloneRepo_EmptyRepo_NewRepoInitializedAtRepoDir() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -224,8 +210,7 @@ public class GitProviderTest {
 
 
     @Test
-    @DisplayName("Local repo not set up, calls setupRepo")
-    void updateRepoTest1() {
+    void UpdateRepo_RepoNotSetUp_CallsSetupRepo() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -252,8 +237,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Repo not linked to remote, throws exception")
-    void updateRepoTest2() {
+    void UpdateRepo_RepoHasNoRemote_ThrowsException() {
         // arrange
         GitProvider provider = getProviderWithValidSecrets();
 
@@ -263,8 +247,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Empty repo, throws exception")
-    void updateRepoTest3() {
+    void UpdateRepo_EmptyRepo_ThrowsException() {
         // arrange
         GitProvider provider = getProviderWithValidSecrets();
 
@@ -274,8 +257,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Clone repo then update, repo is in expected up-to-date state")
-    void updateRepoTest4() {
+    void UpdateRepo_LocalRepoSetUp_RepoIsInExpectedState() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -301,8 +283,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Local repo up-to-date, no errors thrown and repo is in expected state")
-    void updateRepoTest5() {
+    void UpdateRepo_LocalRepoAlreadyUpToDate_NoExceptionsAndRepoUpToDate() {
         // arrange
         GitProvider provider = getProviderWithValidSecrets();
 
@@ -318,8 +299,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Local repo behind remote, update repo brings local to expected state")
-    void updateRepoTest6() {
+    void UpdateRepo_LocalBehindRemote_RepoUpToDate() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -348,8 +328,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Invalid user secrets, throws exception")
-    void updateRepoTest7() {
+    void UpdateRepo_InvalidUserSecrets_ThrowsException() {
         try {
             // arrange
             GitProvider provider = new GitProvider(new ConfigSecrets("invalidUser", "invalidPass"), 3);
@@ -370,8 +349,7 @@ public class GitProviderTest {
 
 
     @Test
-    @DisplayName("Git not started up, throws exception")
-    void getBranchesTest1() {
+    void GetBranches_NotSetup_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -380,8 +358,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("No branches, returns empty list")
-    void getBranchesTest2() {
+    void GetBranches_NoBranches_ReturnsEmptyList() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -408,8 +385,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Repo with some branches, correctly set up, correct list of branches returned")
-    void getBranchesTest3() {
+    void GetBranches_ValidRepo_ReturnsExpectedBranches() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -451,8 +427,7 @@ public class GitProviderTest {
 
 
     @Test
-    @DisplayName("Git not started up, throws exception")
-    void getTagsTest1() {
+    void GetTags_NotSetup_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -461,8 +436,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("No tags, returns empty list")
-    void getTagsTest2() {
+    void GetTags_NoTags_ReturnsEmptyList() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -488,8 +462,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Repo with some tags, correctly set up, correct list of tags returned")
-    void getTagsTest3() {
+    void GetTags_ValidRepo_ReturnsExpectedTags() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -528,8 +501,7 @@ public class GitProviderTest {
 
 
     @Test
-    @DisplayName("Git not setup, throws exception")
-    void createTagTest1() {
+    void CreateTag_NotSetup_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -538,9 +510,8 @@ public class GitProviderTest {
     }
 
     @ParameterizedTest
-    @DisplayName("Tag passed to method has null or empty parts, throws exception")
     @MethodSource("generateInvalidTags")
-    void createTagTest2(Tag tag, String testId) {
+    void CreateTag_InvalidTagParameter_ThrowsException(Tag tag, String testId) {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -571,9 +542,8 @@ public class GitProviderTest {
     }
 
     @ParameterizedTest
-    @DisplayName("Tag's commit list contains invalid commits, throws exception")
     @MethodSource("generateTagsWithInvalidCommits")
-    void createTagTest3(Tag tag) {
+    void CreateTag_InvalidCommitHistoryOnTag_ThrowsException(Tag tag) {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -614,8 +584,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Valid tag with valid commits, creates tag")
-    void createTagTest4() {
+    void CreateTag_ValidTag_TagIsCreated() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -648,8 +617,7 @@ public class GitProviderTest {
 
 
     @Test
-    @DisplayName("Null branch passed in as parameter, throws exception")
-    void deleteBranchTest1() {
+    void DeleteBranch_NullBranchParameter_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -658,8 +626,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Git not started up, throws exception")
-    void deleteBranchTest2() {
+    void DeleteBranch_NotSetup_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -668,8 +635,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Branch passed in does not exist in repo, does nothing")
-    void deleteBranchTest3() {
+    void DeleteBranch_BranchNotInRepo_DoesNothing() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -699,8 +665,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Branch to be deleted is checked out, branch is still successfully deleted")
-    void deleteBranchTest4() {
+    void DeleteBranch_BranchCheckedOut_BranchDeleted() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -731,8 +696,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Branch to be deleted is not checked out, successfully deletes branch")
-    void deleteBranchTest5() {
+    void DeleteBranch_ValidSetup_BranchDeleted() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -764,8 +728,7 @@ public class GitProviderTest {
 
 
     @Test
-    @DisplayName("Null tag passed in as parameter, throws exception")
-    void deleteTagTest1() {
+    void DeleteTag_NullTagParameter_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -774,8 +737,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Git not started up, throws exception")
-    void deleteTagTest2() {
+    void DeleteTag_NotSetup_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -784,8 +746,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Tag passed in does not exist in repo, does nothing")
-    void deleteTagTest3() {
+    void DeleteTag_TagNotInRepo_DoesNothing() {
         try {
             // arrange
             GitProvider gp = getProviderWithValidSecrets();
@@ -816,8 +777,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Tag is successfully deleted")
-    void deleteTagTest4() {
+    void DeleteTag_ValidSetup_TagDeleted() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -848,8 +808,7 @@ public class GitProviderTest {
 
 
     @Test
-    @DisplayName("Valid branch to delete, branch is deleted from remote")
-    void pushDeleteRemoteBranchTest1() {
+    void PushDeleteRemoteBranch_ValidSetup_BranchRemovedFromRemote() {
         try {
             // arrange
             GitProvider provider1 = getProviderWithValidSecrets();
@@ -895,8 +854,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Branch does not exist in repo, does nothing")
-    void pushDeleteRemoteBranchTest2() {
+    void PushDeleteRemoteBranch_BranchNotInRemote_DoesNothing() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -927,8 +885,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Git not started up, throws exception")
-    void pushDeleteRemoteBranchTest3() {
+    void PushDeleteRemoteBranch_NotSetup_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -938,8 +895,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("No remote repo linked, throws exception")
-    void pushDeleteRemoteBranchTest4() {
+    void PushDeleteRemoteBranch_RemoteNotLinked_ThrowsException() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -958,8 +914,7 @@ public class GitProviderTest {
 
 
     @Test
-    @DisplayName("Git not started up, throws exception")
-    void pushNewTagsTest1() {
+    void PushNewTags_NotSetup_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -968,8 +923,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("New tags to push to remote, tags appear in remote")
-    void pushNewTagsTest2() {
+    void PushNewTags_ValidSetup_TagsAddedToRemote() {
         try {
             // arrange
             GitProvider provider1 = getProviderWithValidSecrets();
@@ -1025,8 +979,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("No new tags to push, does nothing")
-    void pushNewTagsTest3() {
+    void PushNewTags_NoNewTags_DoesNothing() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -1055,8 +1008,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("No remote repo linked, throws exception")
-    void pushNewTagsTest4() {
+    void PushNewTags_NoRemoteLinked_ThrowsException() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -1086,8 +1038,7 @@ public class GitProviderTest {
 
 
     @Test
-    @DisplayName("Git not started up, throws exception")
-    void pushDeleteRemoteTagTest1() {
+    void PushDeleteRemoteTag_NotSetup_ThrowsException() {
         // arrange
         GitProvider provider = getProvider();
 
@@ -1097,8 +1048,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("No remote linked, throws exception")
-    void pushDeleteRemoteTagTest2() {
+    void PushDeleteRemoteTag_NoRemoteLinked_ThrowsException() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -1125,8 +1075,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Tag does not exist in repo, does nothing")
-    void pushDeleteRemoteTagTest3() {
+    void PushDeleteRemoteTag_TagNotInRemote_DoesNothing() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -1156,8 +1105,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Valid tag to delete, changes reflected in remote")
-    void pushDeleteRemoteTagTest4() {
+    void PushDeleteRemoteTag_ValidSetup_TagRemovedFromRemote() {
         try {
             // arrange
             GitProvider provider = getProviderWithValidSecrets();
@@ -1201,8 +1149,7 @@ public class GitProviderTest {
     }
 
     @Test
-    @DisplayName("Tag not deleted on local, pushDeleteRemoteTag called on valid tag, change happens only to remote")
-    void pushDeleteRemoteTagTest5() {
+    void PushDeleteRemoteTag_LocalTagNotRemoved_TagRemovedOnRemote() {
         try {
             // arrange
             GitProvider provider1 = getProviderWithValidSecrets();
